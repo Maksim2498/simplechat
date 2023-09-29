@@ -16,7 +16,7 @@ This is a simple terminal chatting application.
 It consists of:
 
 - [`Core`](./core/README.md) - utility library;
-- [`Client`](./client/README.md);
+- [`Client`](./client/README.md) (***WIP***);
 - [`Server`](./server/README.md).
 
 For more info on each of it's parts see links above.
@@ -62,9 +62,9 @@ java -jar /path/to/achive.jar
 
 ## Documentation
 
-- [Protocol](./docs/protocol.md).
-- [Client CLI](./client/docs/cli.md);
-- [Client shell](./client/docs/shell.md);
+- [Protocol](./docs/protocol.md) (***WIP***).
+- [Client CLI](./client/docs/cli.md) (***WIP***);
+- [Client shell](./client/docs/shell.md) (***WIP***);
 - [Server CLI](./server/docs/cli.md);
 - [Server shell](./server/docs/shell.md);
 - [Code of Conduct](./docs/CODE_OF_CONDUCT.md);
