@@ -1,4 +1,4 @@
-# Simple Scala Chat
+# Simple Scala Chat (***WIP***)
 
 ## Table of Contents
 
