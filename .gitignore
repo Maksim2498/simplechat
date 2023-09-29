@@ -1,0 +1,20 @@
+# Bloop and Metals
+.bloop/
+.bsp/
+.metals/
+project/metals.sbt
+
+# Sbt
+project/project/
+target/
+sbt-launch.jar
+
+# VS Code
+.vscode/
+
+# IntelliJ IDEA
+.idea/
+.ideavimrc
+
+# Mac OS
+.DS_Store

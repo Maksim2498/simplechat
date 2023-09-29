@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <SimplechatConsoleAppender name="Console">
+            <PatternLayout pattern="%%highlight{%-5level} %style{[}{dim} %style{%logger{1}}{bright magenta} %style{:}{dim} %style{%t}{magenta} %style{]}{dim} %msg%n"/>
+        </SimplechatConsoleAppender>
+    </Appenders>
+    <Loggers>
+        <Root level="all">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
