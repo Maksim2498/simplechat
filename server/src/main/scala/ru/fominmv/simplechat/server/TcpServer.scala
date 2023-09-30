@@ -58,6 +58,15 @@ class TcpServer(
     override def clients: List[Client] =
         clientMap.values.toList
 
+    override def pingClients(except: Set[Int] = Set()): Unit =
+        ClosedException.checkOpen(this, "Server is closed")
+
+        for
+            (id, client) <- clientMap
+            if !(except contains id)
+        do
+            client.ping
+
     override def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
         ClosedException.checkOpen(this, "Server is closed")
 
@@ -85,6 +94,7 @@ class TcpServer(
         closeClients
         closeSocket
         stopConnectionAccpetingThread
+        stopPingingThread
 
         logger debug "Closed"
 
@@ -101,8 +111,15 @@ class TcpServer(
     private val clientMap                 = HashMap[Int, TcpServerClient]()
     private val connectionAcceptingThread = Thread(
         () => connectionAcceptingThreadBody,
-        "Connection Listener"
+        "Connection Listener",
     )
+    private val pingingThread             = if pingInterval != 0.seconds then
+        Thread(
+            () => pingingThreadBody,
+            "Pinger",
+        )
+    else
+        null
 
 
     if maxPendingCommands < 0 then
@@ -120,6 +137,10 @@ class TcpServer(
     logger debug "Starting connection listening thread..."
     connectionAcceptingThread.start
 
+    if pingingThread != null then
+        logger debug "Starting pinging thread..."
+        pingingThread.start
+
     synchronized {
         while
             try
@@ -127,7 +148,9 @@ class TcpServer(
             catch
                 case _: InterruptedException => onInterrupted
 
-            connectionAcceptingThread.getState == Thread.State.NEW
+            connectionAcceptingThread.getState == Thread.State.NEW ||
+            pingingThread                      != null             &&
+            pingingThread.getState             == Thread.State.NEW
         do ()
     }
 
@@ -162,17 +185,36 @@ class TcpServer(
                     eventListener onConnected client
                 }
             catch
-                case e: SocketException        =>
-                    if open then
-                        onException(e)
+                case ioe: IOException          => onIOException(ioe)
+                case _:   InterruptedException => onInterrupted
+                case e:   Exception            => onException(e)
 
-                case ioe: IOException          => logger error ioe
+    private def pingingThreadBody: Unit =
+        logger debug "Started"
+
+        synchronized {
+            notify()
+        }
+
+        while open do
+            try
+                logger debug "Waiting..."
+                Thread sleep pingInterval.toMillis
+                pingClients
+            catch
+                case ioe: IOException          => onIOException(ioe)
                 case _:   InterruptedException => onInterrupted
                 case e:   Exception            => onException(e)
 
     private def onInterrupted: Unit =
         logger debug "Interrupted"
         Thread.interrupted
+
+    private def onIOException(exception: IOException): Unit =
+        if open then
+            onException(exception)
+        else
+            logger debug "Socket is closed"
 
     private def onException(exception: Exception): Unit =
         logger error exception
@@ -200,8 +242,12 @@ class TcpServer(
     private def stopConnectionAccpetingThread: Unit =
         ThreadUtil.stop(connectionAcceptingThread, Some(logger))
 
+    private def stopPingingThread: Unit =
+        if pingingThread != null then
+            ThreadUtil.stop(pingingThread, Some(logger))
 
-    class TcpServerClient(
+
+    private class TcpServerClient(
         val id:     Int,
         val socket: Socket,
         var name:   Option[String] = None,
@@ -220,7 +266,6 @@ class TcpServer(
 
             sendCloseCommand
             closeSocket
-            stopPingingThread
             stopPacketReceivingThread
             removeFromClients
 
@@ -264,10 +309,6 @@ class TcpServer(
 
         private val pendingCommandCodes   = if maxPendingCommands != 0 then HashSet[Short]() else null
         private val logger                = LogManager getLogger getClass.getName + s"#$id"
-        private val pingingThread         = Thread(
-            () => pingingThreadBody,
-            "Pinger",
-        )
         private val packetReceivingThread = Thread(
             () => packetReceivingThreadBody,
             "Packet Receiver",
@@ -279,10 +320,6 @@ class TcpServer(
         logger debug "Starting packet receiving thread..."
         packetReceivingThread.start
 
-        if isPinginging then
-            logger debug "Starting pinging thead..."
-            pingingThread.start
-
         synchronized {
             while
                 try
@@ -290,9 +327,7 @@ class TcpServer(
                 catch
                     case _: InterruptedException => onInterrupted
 
-                packetReceivingThread.getState == Thread.State.NEW ||
-                isPinginging                                       &&
-                pingingThread.getState         == Thread.State.NEW
+                packetReceivingThread.getState == Thread.State.NEW
             do ()
         }
 
@@ -324,24 +359,6 @@ class TcpServer(
             pendingCommandCodes addOne code
 
             code
-
-        private def pingingThreadBody: Unit =
-            logger debug "Started"
-
-            synchronized {
-                notify()
-            }
-
-            while open do
-                try
-                    logger debug "Waiting..."
-                    Thread sleep pingInterval.toMillis
-                    ping
-                catch
-                    case _:   InterruptedIOException => onInterrupted
-                    case _:   InterruptedException   => onInterrupted
-                    case ioe: IOException            => onIOException(ioe)
-                    case e:   Exception              => onException(e)
 
         private def packetReceivingThreadBody: Unit =
             logger debug "Started"
@@ -509,9 +526,6 @@ class TcpServer(
 
         private def stopPacketReceivingThread: Unit =
             ThreadUtil.stop(packetReceivingThread, Some(logger))
-
-        private def stopPingingThread: Unit =
-            ThreadUtil.stop(pingingThread, Some(logger))
 
         private def removeFromClients: Unit =
             logger debug "Removing from client map..."
