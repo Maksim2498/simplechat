@@ -12,6 +12,7 @@
 ## About
 
 This is a simple terminal chatting application.
+Project is created in self-education purposes and has no real-world use potential.
 
 It consists of:
 
