@@ -338,9 +338,6 @@ class TcpServer(
         logger debug "Opened"
 
 
-        private def isPinginging: Boolean =
-            pingInterval.toMillis != 0
-
         private def inputStream: InputStream =
             socket.getInputStream
 
