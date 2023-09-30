@@ -15,6 +15,20 @@ trait Server extends Closeable:
     def clients:       List[Client]
 
     @throws[ClosedException]("When closed")
+    def pingClients: Unit =
+        pingClients()
+
+    @throws[ClosedException]("When closed")
+    def pingClients(except: Set[Int] = Set()): Unit =
+        ClosedException.checkOpen(this, "Server is closed")
+
+        for
+            client <- clients
+            if !(except contains client.id)
+        do
+            client.ping
+
+    @throws[ClosedException]("When closed")
     def broadcastMessage(text: String): Unit =
         broadcastMessage(text, Set())
 
@@ -25,7 +39,12 @@ trait Server extends Closeable:
     @throws[ClosedException]("When closed")
     def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
         ClosedException.checkOpen(this, "Server is closed")
-        clients foreach (_ sendMessage message)
+
+        for
+            client <- clients
+            if !(except contains client.id)
+        do
+            client.ping
 
     def makeMessage(text: String): Message =
         Message(name, text)
