@@ -76,7 +76,7 @@ class TcpServer(
         logger debug "Opening..."
 
         startConnectionAcceptingThread
-        startPingingThreadIfNotNull
+        startPingingThreadIfNeeded
         waitThreadsStarted
 
         logger debug "Opened"
@@ -205,7 +205,7 @@ class TcpServer(
         logger debug "Starting connection listening thread..."
         connectionAcceptingThread.start
 
-    private def startPingingThreadIfNotNull: Unit =
+    private def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
             logger debug "Starting pinging thread..."
             pingingThread.start
