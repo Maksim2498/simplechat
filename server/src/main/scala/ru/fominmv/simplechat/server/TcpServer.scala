@@ -258,6 +258,7 @@ class TcpServer(
     class Client protected[server] (
                 val id:     Int,
         private val socket: Socket,
+                @volatile
                 var name:   Option[String] = None,
     ) extends ClientTrait:
         override def closed: Boolean =
