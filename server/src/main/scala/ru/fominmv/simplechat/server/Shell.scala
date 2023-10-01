@@ -27,8 +27,8 @@ class Shell(val server: Server) extends ShellTrait:
         if input.isBlank then
             return
 
-        console print s"${server.name}: ${input}"
         server broadcastMessage input
+        console print s"${server.name}: ${input}"
 
 
     private var open = true
