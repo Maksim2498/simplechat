@@ -41,11 +41,12 @@ import ru.fominmv.simplechat.core.protocol.{
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
-import ru.fominmv.simplechat.server.event.EventListener
+import ru.fominmv.simplechat.server.event.{EventListener, ConcurentEventListener}
 import ru.fominmv.simplechat.server.Config.*
 import ru.fominmv.simplechat.server.State.*
 import ru.fominmv.simplechat.server.{Client => ClientTrait}
 import ru.fominmv.simplechat.core.protocol.ServerPacket
+import ru.fominmv.simplechat.server.event.LogEventListener.onDisconnectedByServer
 
 
 class TcpServer(
@@ -67,11 +68,7 @@ class TcpServer(
     override def open: Unit =
         _state synchronized {
             ClosedException.checkOpen(this, "Server is closed")
-
-            eventListener synchronized {
-                eventListener.onPreOpen
-            }
-
+            concurentEventListener.onPreOpen
             _state = OPENING
         }
 
@@ -86,18 +83,14 @@ class TcpServer(
 
         _state = OPEN
 
-        eventListener synchronized {
-            eventListener.onPostOpen
-        }
+        concurentEventListener.onPostOpen
 
     override def close: Unit =
         _state synchronized {
             if closed then
                 return
 
-            eventListener synchronized {
-                eventListener.onPreClose
-            }
+            concurentEventListener.onPreClose
 
             _state = CLOSING
         }
@@ -111,11 +104,9 @@ class TcpServer(
 
         logger debug "Closed"
 
-        eventListener synchronized {
-            eventListener.onPostClose
-        }
-
         _state = CLOSED
+
+        concurentEventListener.onPostClose
 
 
     @volatile
@@ -124,6 +115,7 @@ class TcpServer(
     @volatile
     private var lastClientId              = 0
 
+    private val concurentEventListener    = ConcurentEventListener(eventListener)
     private val socket                    = ServerSocket(port, backlog)
     private val clientMap                 = HashMap[Int, this.Client]()
     private val connectionAcceptingThread = Thread(
@@ -166,9 +158,7 @@ class TcpServer(
 
                 val client = new Client(clientId, clientSocket)
 
-                eventListener synchronized {
-                    eventListener onConnected client
-                }
+                concurentEventListener onConnected client
             catch
                 case ioe: IOException          => onIOException(ioe)
                 case _:   InterruptedException => onInterrupted
@@ -267,10 +257,7 @@ class TcpServer(
 
         override def close: Unit =
             closeWithoutNotifying
-
-            eventListener synchronized {
-                eventListener onDisconnectedByServer this
-            }
+            concurentEventListener onDisconnectedByServer this
 
         override def address: InetAddress =
             socket.getInetAddress
@@ -429,9 +416,7 @@ class TcpServer(
 
             logger debug "Disconnected"
 
-            eventListener synchronized {
-                eventListener onDisconnected this
-            }
+            concurentEventListener onDisconnected this
 
         private def onSetNameCommand(code: Short, name: String): Unit =
             logger debug s"Received name set command: \"${escape(name)}\"..."
@@ -443,9 +428,7 @@ class TcpServer(
 
                 logger debug "The name is accepted"
 
-                eventListener synchronized {
-                    eventListener.onSetName(this, oldName)
-                }
+                concurentEventListener.onSetName(this, oldName)
 
                 OK
             else
@@ -476,11 +459,7 @@ class TcpServer(
                 ERROR
             else
                 logger debug "The message is accepted"
-
-                eventListener synchronized {
-                    eventListener.onMessage(this, text)
-                }
-
+                concurentEventListener.onMessage(this, text)
                 OK
 
             sendResponse(code, status)
@@ -526,12 +505,8 @@ class TcpServer(
 
         private def onException(exception: Exception): Unit =
             logger error exception
-
             closeWithoutNotifying
-
-            eventListener synchronized {
-                eventListener onConnectionLost this
-            }
+            concurentEventListener onConnectionLost this
 
         private def closeSocket: Unit =
             logger debug "Closing socket..."
