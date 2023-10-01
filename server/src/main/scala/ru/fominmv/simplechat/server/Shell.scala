@@ -42,20 +42,7 @@ class Shell(val server: Server) extends ShellTrait:
     private val HELP_COMMAND = Command(
         name        = "help",
         description = Some("Prints help message"),
-        action      = _ =>
-            console print "Usage:"
-            console print "    /<command> - executes specified command"
-            console print "    <message>  - broadcasts entered message"
-            console print ""
-            console print "Commands:"
-    
-            for command <- commands do
-                val usage             = (commandUsageMap get command.name).get
-                val descriptionIndent = " " * (commandDescriptionIndent - usage.length + 1)
-                val description       = command.description getOrElse ""
-                val message           = s"    $usage$descriptionIndent$description"
-
-                console print message
+        action      = _ => printHelp
     )
 
     private val KICK_COMMAND = Command(
@@ -115,21 +102,3 @@ class Shell(val server: Server) extends ShellTrait:
         KICK_ALL_COMMAND,
         LIST_COMMAND,
     )
-
-    private lazy val commandDescriptionIndent: Int =
-        commandUsageMap.map(_._2.length).max
-
-    private lazy val commandUsageMap: Map[String, String] =
-        val builder = Map.newBuilder[String, String]
-
-        for command <- COMMANDS do
-            builder addOne (command.name, formatCommandUsage(command))
-
-        builder.result
-
-    
-    private def formatCommandUsage(command: Command): String =
-        if command.args.isEmpty then
-            s"${command.name}"
-        else
-            s"${command.name} ${command.args.map("<" + _ + ">").mkString(" ")}"

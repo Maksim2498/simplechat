@@ -74,3 +74,43 @@ trait Shell extends Closeable:
             throw IllegalArgumentException(s"Command /$commandName takes ${command.args.length} argument(s) not ${args.length - 1}")
 
         command action args.drop(1).toList
+    
+    protected def printHelp: Unit =
+        printHelp()
+    
+    protected def printHelp(
+        usage: String = "Usage:\n"                            +
+                        "    /<command> - executes command\n" +
+                        "    <message>  - send message\n"     +
+                        "\n"                                  +
+                        "Commands:\n"
+    ): Unit =
+        if !usage.isBlank then
+            usage.lines forEach (console print _)
+
+        for command <- commands do
+            val usage             = (commandUsageMap get command.name).get
+            val descriptionIndent = " " * (commandDescriptionIndent - usage.length + 1)
+            val description       = command.description getOrElse ""
+            val message           = s"    $usage$descriptionIndent$description"
+
+            console print message
+    
+
+    private lazy val commandDescriptionIndent: Int =
+        commandUsageMap.map(_._2.length).max
+
+    private lazy val commandUsageMap: Map[String, String] =
+        val builder = Map.newBuilder[String, String]
+
+        for command <- commands do
+            builder addOne (command.name, formatCommandUsage(command))
+
+        builder.result
+
+    
+    private def formatCommandUsage(command: Command): String =
+        if command.args.isEmpty then
+            s"${command.name}"
+        else
+            s"${command.name} ${command.args.map("<" + _ + ">").mkString(" ")}"
