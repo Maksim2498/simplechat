@@ -6,7 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 import ru.fominmv.simplechat.server.Client
 
 
-case class CascadeEventListener() extends EventListener:
+class CascadeEventListener extends EventListener:
     val eventListeners = ArrayBuffer[EventListener]()
 
     override def onPreOpen: Unit =
