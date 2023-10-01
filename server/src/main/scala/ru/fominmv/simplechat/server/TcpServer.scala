@@ -72,7 +72,6 @@ class TcpServer(
             _state = OPENING
         }
 
-
         logger debug "Opening..."
 
         startConnectionAcceptingThread
