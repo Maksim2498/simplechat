@@ -84,11 +84,11 @@ class TcpServer(
 
         logger debug "Opened"
 
+        _state = OPEN
+
         eventListener synchronized {
             eventListener.onPostOpen
         }
-
-        _state = OPEN
 
     override def close: Unit =
         _state synchronized {
