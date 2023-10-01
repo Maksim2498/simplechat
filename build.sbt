@@ -1,5 +1,7 @@
-import sbtassembly.Log4j2MergeStrategy
 import sbt.Package.ManifestAttributes
+
+import sbtassembly.Log4j2MergeStrategy
+
 
 ThisBuild / organization := "ru.fominmv"
 ThisBuild / version      := "1.0.0"
@@ -35,6 +37,7 @@ assembly / assemblyJarName := "" // Do not generate assembly file
 
 lazy val client = project
     .dependsOn(core)
+    .enablePlugins(BuildInfoPlugin)
     .settings(
         buildInfoPackage           := "ru.fominmv.simplechat.client",
         buildInfoKeys              := Seq(name, version),
