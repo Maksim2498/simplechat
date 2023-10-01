@@ -21,10 +21,10 @@ Command names are case insensitive.
 
 ## Commands
 
-| Name       | Arguments       | Description            |
-|------------|-----------------|------------------------|
-| `stop`     | -               | Stops shell and server |
-| `help`     | -               | Prints help message    |
-| `kick`     | `<name or #id>` | Kicks specified user   |
-| `kick-all` | -               | Kicks all the users    |
-| `list`     | -               | Prints user list       |
+| Name       | Arguments       | Description          |
+|------------|-----------------|----------------------|
+| `close`    | -               | Closes shell         |
+| `help`     | -               | Prints help message  |
+| `kick`     | `<name or #id>` | Kicks specified user |
+| `kick-all` | -               | Kicks all the users  |
+| `list`     | -               | Prints user list     |
