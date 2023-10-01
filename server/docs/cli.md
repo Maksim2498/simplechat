@@ -46,9 +46,9 @@ It will look like this: `--port=1502` or `--port 1502`.
 | `--debug`, `-d`          | -                   | -             | Enables debug mode                                                                                                                     |
 | `--broadcast-messages`   | `boolean`           | `true`        | Enables or disables broadcasting of received messages to all clients                                                                   |
 | `--print-messages`       | `boolean`           | `true`        | Enables or disables printing of received messages                                                                                      |
-| `--port`                 | `int`               | `24982`       | Specifies server port                                                                                                                  |
+| `--port`, `-p`           | `int`               | `24982`       | Specifies server port                                                                                                                  |
 | `--backlog`              | `int`               | `50`          | Sepcifies limit of simultaneous connection attempts to the server                                                                      |
 | `--max-pending-commands` | `int`               | `50`          | Specifies how many commands may be sent to client without response before connection closure (if 0 then all responses will be ignored) |
-| `--name`                 | `string`            | `<Server>`    | Specifies server name                                                                                                                  |
+| `--name`, `-n`           | `string`            | `<Server>`    | Specifies server name                                                                                                                  |
 | `--ping-interval`        | `duration`          | `10s`         | Specifies delay between clients pinging (if 0 then pinging is disabled)                                                                |
-| `--protocol`             | `"text" | "binary"` | `text`        | Specifies server protocol type                                                                                                         |
+| `--protocol`, `-P`       | `"text" | "binary"` | `text`        | Specifies server protocol type                                                                                                         |

@@ -74,7 +74,7 @@ object Main:
                 .text("Enables or disables printing of received messages")
                 .action((v, c) => c.copy(logMessages = v)),
 
-            opt[Int]("port")
+            opt[Int]('p', "port")
                 .text("Specifies server port")
                 .action((v, c) => c.copy(port = v))
                 .validate(
@@ -104,7 +104,7 @@ object Main:
                         failure("Option --max-pending-commands must be non-negative")
                 ),
 
-            opt[String]("name")
+            opt[String]('n', "name")
                 .text("Specifies server name")
                 .action((v, c) => c.copy(name = v)),
 
@@ -118,7 +118,7 @@ object Main:
                         failure("Option --max-pending-commands must be non-negative")
                 ),
 
-            opt[Protocol]("protocol")
+            opt[Protocol]('P', "protocol")
                 .text("Specifies server protocol type")
                 .action((v, c) => c.copy(protocol = v)),
         )
