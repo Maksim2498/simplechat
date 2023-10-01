@@ -36,6 +36,9 @@ object LogEventListener extends EventListener:
 
     override def onConnectionLost(client: Client): Unit =
         logger info s"Lost connection with ${client.fullname}"
+    
+    override def onFatalError(client: Client): Unit =
+        logger error s"${client.fullname} reponded with fatal error"
 
 
     private val logger = LogManager getLogger getClass

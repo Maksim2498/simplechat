@@ -39,6 +39,9 @@ class CascadeEventListener extends EventListener:
     override def onConnectionLost(client: Client): Unit =
         eventListeners foreach (_ onConnectionLost client)
 
+    override def onFatalError(client: Client): Unit =
+        eventListeners foreach (_ onFatalError client)
+
 object CascadeEventListener:
     def apply(eventListeners: EventListener*): CascadeEventListener =
         val eventListener = new CascadeEventListener()

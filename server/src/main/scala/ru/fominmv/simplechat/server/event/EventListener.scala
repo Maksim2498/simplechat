@@ -15,3 +15,4 @@ trait EventListener:
     def onDisconnectedByServer(client: Client): Unit = ()
     def onDisconnected(client: Client): Unit = ()
     def onConnectionLost(client: Client): Unit = ()
+    def onFatalError(client: Client): Unit = ()

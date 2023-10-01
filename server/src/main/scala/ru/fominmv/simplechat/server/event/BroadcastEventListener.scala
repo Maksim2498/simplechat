@@ -45,3 +45,9 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
             s"Lost connection with ${client.fullname}",
             Set(client.id),
         )
+
+    override def onFatalError(client: Client): Unit =
+        server.broadcastMessage(
+            s"${client.fullname} reponded with fatal error",
+            Set(client.id),
+        )

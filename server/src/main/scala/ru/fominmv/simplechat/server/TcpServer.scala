@@ -466,13 +466,19 @@ class TcpServer(
         private def onResponse(code: Short, status: Status): Unit =
             logger debug s"Got response: $code - $status"
 
+            if status == FATAL then
+                logger error "Client responded fith fatal error"
+                closeWithoutNotifying
+                concurentEventListener onFatalError this
+                return
+
             if pendingCommandCodes == null || (pendingCommandCodes remove code) then
                 logger debug "Reponse accepted"
-            else
-                logger error "Response with such a code wasn't expected"
-                throw ProtocolException()
+                return
 
-            sendResponse(code, status)
+            logger error "Response with such a code wasn't expected"
+
+            throw ProtocolException()
 
         private def sendResponse(code: Short, status: Status): Unit =
             logger debug s"Sending response: $code - $status"

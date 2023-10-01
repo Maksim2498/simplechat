@@ -54,3 +54,8 @@ class ConcurentEventListener(val eventListener: EventListener) extends EventList
         eventListener synchronized {
             eventListener onConnectionLost client
         }
+
+    override def onFatalError(client: Client): Unit =
+        eventListener synchronized {
+            eventListener onFatalError client
+        }
