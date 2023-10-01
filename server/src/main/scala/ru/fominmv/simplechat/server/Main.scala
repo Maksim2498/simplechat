@@ -10,6 +10,7 @@ import org.apache.logging.log4j.{LogManager, Level}
 
 import scopt.{OParser, Read}
 
+import ru.fominmv.simplechat.core.cli.scopt.protocolRead
 import ru.fominmv.simplechat.core.protocol.binary.BinaryProtocol
 import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.Protocol
@@ -45,13 +46,6 @@ object Main:
 
 
     private val logger = LogManager getLogger getClass
-
-    private implicit val protocolRead: Read[Protocol] =
-        Read reads (
-            _ match
-                case "text"   => TextProtocol()
-                case "binary" => BinaryProtocol()
-        )
 
     private val cliParser =
         val builder = OParser.builder[Config]
