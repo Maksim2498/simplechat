@@ -3,17 +3,15 @@ package ru.fominmv.simplechat.server
 
 import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
-import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
-import org.apache.logging.log4j.core.config.Configurator
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.{LogManager, Level}
-
 import scopt.{OParser, Read}
+
+import org.apache.logging.log4j.LogManager
 
 import ru.fominmv.simplechat.core.cli.scopt.protocolRead
 import ru.fominmv.simplechat.core.protocol.binary.BinaryProtocol
 import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.Protocol
+import ru.fominmv.simplechat.core.log.configureLogger
 import ru.fominmv.simplechat.core.util.JarUtil.jarName
 import ru.fominmv.simplechat.core.util.UnsignedUtil.USHORT_MAX
 
@@ -31,7 +29,7 @@ object Main:
             if !config.run then
                 return
 
-            configureLogger(config)
+            configureLogger(config.debug)
 
             try
                 run(config)
@@ -124,55 +122,6 @@ object Main:
                 .text("Specifies server protocol type")
                 .action((v, c) => c.copy(protocol = v)),
         )
-
-
-    private def configureLogger(config: Config): Unit =
-        val logConfigBuilder = ConfigurationBuilderFactory.newConfigurationBuilder
-        val appenderName     = "Console"
-        val console          = logConfigBuilder.newAppender(appenderName, "SimplechatConsoleAppender")
-        val layout           = logConfigBuilder newLayout "PatternLayout"
-        val rootLogger       = logConfigBuilder newRootLogger (
-            if config.debug then
-                Level.ALL
-            else
-                Level.INFO
-        )
-
-        layout.addAttribute(
-            "pattern",
-            if config.debug then
-                //        bright
-                //        magenta  magenta
-                //        |        |
-                // dim    | dim    | dim      highlight
-                // |      | |      | |        |
-                // v      v v      v v        v
-                // [<logger>:<thread>] <message>
-                "%style{[}{dim}"                     +
-                "%style{%logger{1}}{bright magenta}" +
-                "%style{:}{dim}"                     +
-                "%style{%t}{magenta}"                +
-                "%style{]}{dim}"                     +
-                " %highlight{%msg}{INFO=white}"
-            else
-                "%highlight{%msg}{INFO=white}"
-        )
-
-        console add layout
-        logConfigBuilder add console
-
-        rootLogger add (logConfigBuilder newAppenderRef appenderName)
-        logConfigBuilder add rootLogger
-
-        logConfigBuilder setStatusLevel Level.WARN
-
-        val logConfig = logConfigBuilder.build
-
-        Configurator initialize logConfig
-
-        val logContext = (LogManager getContext false).asInstanceOf[LoggerContext]
-
-        logContext setConfiguration logConfig
 
     private def run(config: Config): Unit =
         val builder = ServerBuilder(
