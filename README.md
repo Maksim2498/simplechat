@@ -64,7 +64,7 @@ java -jar /path/to/achive.jar
 ## Documentation
 
 - [Protocol](./docs/protocol.md) (***WIP***).
-- [Client CLI](./client/docs/cli.md) (***WIP***);
+- [Client CLI](./client/docs/cli.md);
 - [Client shell](./client/docs/shell.md) (***WIP***);
 - [Server CLI](./server/docs/cli.md);
 - [Server shell](./server/docs/shell.md);
