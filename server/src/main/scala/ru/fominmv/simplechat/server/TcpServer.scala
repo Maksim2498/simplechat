@@ -467,7 +467,7 @@ class TcpServer(
             logger debug s"Got response: $code - $status"
 
             if status == FATAL then
-                logger error "Client responded fith fatal error"
+                logger debug "Client responded fith fatal error"
                 closeWithoutNotifying
                 concurentEventListener onFatalError this
                 return
