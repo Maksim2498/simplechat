@@ -12,6 +12,7 @@ trait Client extends Closeable:
     def id:      Int
     def address: InetAddress
     def name:    Option[String]
+    def server:  Server
 
     @throws[ClosedException]("When closed")
     def ping: Unit

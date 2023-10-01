@@ -30,6 +30,9 @@ case class CascadeEventListener() extends EventListener:
     override def onMessage(client: Client, text: String): Unit =
         eventListeners foreach (_.onMessage(client, text))
 
+    override def onDisconnectedByServer(client: Client): Unit =
+        eventListeners foreach (_ onDisconnectedByServer client)
+
     override def onDisconnected(client: Client): Unit =
         eventListeners foreach (_ onDisconnected client)
 

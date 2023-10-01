@@ -28,6 +28,9 @@ object LogEventListener extends EventListener:
     override def onMessage(client: Client, text: String): Unit =
         logger info s"${client.fullname}: $text"
 
+    override def onDisconnectedByServer(client: Client): Unit =
+        logger info s"${client.fullname} was disconnected by server"
+
     override def onDisconnected(client: Client): Unit =
         logger info s"${client.fullname} disconnected"
 

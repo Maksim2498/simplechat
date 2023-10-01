@@ -46,7 +46,7 @@ object Main:
 
     private val logger = LogManager getLogger getClass
 
-    implicit val protocolRead: Read[Protocol] =
+    private implicit val protocolRead: Read[Protocol] =
         Read reads (
             _ match
                 case "text"   => TextProtocol()
@@ -191,7 +191,10 @@ object Main:
             pingInterval       = config.pingInterval,
             protocol           = config.protocol,
         )
-        val server  = builder.builderServer
-        val shell   = Shell(server)
+        val server = builder.builderServer
+
+        server.open
+
+        val shell = Shell(server)
 
         shell.run

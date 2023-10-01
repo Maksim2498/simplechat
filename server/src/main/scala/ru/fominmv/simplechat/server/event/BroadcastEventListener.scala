@@ -28,6 +28,12 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
             Set(client.id),
         )
 
+    override def onDisconnectedByServer(client: Client): Unit =
+        server.broadcastMessage(
+            s"${client.fullname} was disconnected by server",
+            Set(client.id),
+        )
+
     override def onDisconnected(client: Client): Unit =
         server.broadcastMessage(
             s"${client.fullname} disconnected",

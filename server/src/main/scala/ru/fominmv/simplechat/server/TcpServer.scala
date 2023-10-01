@@ -43,6 +43,8 @@ import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
 import ru.fominmv.simplechat.server.event.EventListener
 import ru.fominmv.simplechat.server.Config.*
+import ru.fominmv.simplechat.server.State.*
+import ru.fominmv.simplechat.server.{Client => ClientTrait}
 
 
 class TcpServer(
@@ -55,38 +57,48 @@ class TcpServer(
     override val protocol:           Protocol       = DEFAULT_PROTOCOL,
     override val eventListener:      EventListener  = new EventListener {},
 ) extends Server:
-    override def clients: List[Client] =
-        clientMap.values.toList
+    override def state: State =
+        _state
 
-    override def pingClients(except: Set[Int] = Set()): Unit =
-        ClosedException.checkOpen(this, "Server is closed")
+    override def clients: Set[ClientTrait] =
+        clientMap.values.toSet
 
-        for
-            (id, client) <- clientMap
-            if !(except contains id)
-        do
-            client.ping
+    override def open: Unit =
+        _state synchronized {
+            ClosedException.checkOpen(this, "Server is closed")
 
-    override def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
-        ClosedException.checkOpen(this, "Server is closed")
+            eventListener synchronized {
+                eventListener.onPreOpen
+            }
 
-        for
-            (id, client) <- clientMap
-            if !(except contains id)
-        do
-            client sendMessage message
+            _state = OPENING
+        }
 
-    override def closed: Boolean =
-        !open
+
+        logger debug "Opening..."
+
+        startConnectionAcceptingThread
+        startPingingThreadIfNotNull
+        waitThreadsStarted
+
+        logger debug "Opened"
+
+        eventListener synchronized {
+            eventListener.onPostOpen
+        }
+
+        _state = OPEN
 
     override def close: Unit =
-        open synchronized {
+        _state synchronized {
             if closed then
                 return
 
-            eventListener.onPreClose
+            eventListener synchronized {
+                eventListener.onPreClose
+            }
 
-            open = false
+            _state = CLOSING
         }
 
         logger debug "Closing..."
@@ -98,17 +110,21 @@ class TcpServer(
 
         logger debug "Closed"
 
-        eventListener.onPostClose
+        eventListener synchronized {
+            eventListener.onPostClose
+        }
+
+        _state = CLOSED
 
 
     @volatile
-    private var open                      = true
+    private var _state                    = NEW
 
     @volatile
     private var lastClientId              = 0
 
     private val socket                    = ServerSocket(port, backlog)
-    private val clientMap                 = HashMap[Int, TcpServerClient]()
+    private val clientMap                 = HashMap[Int, this.Client]()
     private val connectionAcceptingThread = Thread(
         () => connectionAcceptingThreadBody,
         "Connection Listener",
@@ -128,38 +144,6 @@ class TcpServer(
     if pingInterval < 0.seconds then
         throw IllegalArgumentException("pingClientsEvery must be non-negative")
 
-    eventListener synchronized {
-        eventListener.onPreOpen
-    }
-
-    logger debug "Opening..."
-
-    logger debug "Starting connection listening thread..."
-    connectionAcceptingThread.start
-
-    if pingingThread != null then
-        logger debug "Starting pinging thread..."
-        pingingThread.start
-
-    synchronized {
-        while
-            try
-                wait()
-            catch
-                case _: InterruptedException => onInterrupted
-
-            connectionAcceptingThread.getState == Thread.State.NEW ||
-            pingingThread                      != null             &&
-            pingingThread.getState             == Thread.State.NEW
-        do ()
-    }
-
-    logger debug "Opened"
-
-    eventListener synchronized {
-        eventListener.onPostOpen
-    }
-
 
     private def connectionAcceptingThreadBody: Unit =
         logger debug "Started"
@@ -168,7 +152,7 @@ class TcpServer(
             notify()
         }
 
-        while open do
+        while !closed do
             try
                 logger debug "Waiting for connections..."
 
@@ -179,7 +163,7 @@ class TcpServer(
 
                 logger debug s"Received connection from ${clientSocket.getInetAddress}"
 
-                val client = TcpServerClient(clientId, clientSocket)
+                val client = new Client(clientId, clientSocket)
 
                 eventListener synchronized {
                     eventListener onConnected client
@@ -196,7 +180,7 @@ class TcpServer(
             notify()
         }
 
-        while open do
+        while !closed do
             try
                 logger debug "Waiting..."
                 Thread sleep pingInterval.toMillis
@@ -206,25 +190,12 @@ class TcpServer(
                 case _:   InterruptedException => onInterrupted
                 case e:   Exception            => onException(e)
 
-    private def onInterrupted: Unit =
-        logger debug "Interrupted"
-        Thread.interrupted
-
-    private def onIOException(exception: IOException): Unit =
-        if open then
-            onException(exception)
-        else
-            logger debug "Socket is closed"
-
-    private def onException(exception: Exception): Unit =
-        logger error exception
-        close
-
     private def closeClients: Unit =
         logger debug "Closing all clients..."
 
         clientMap synchronized {
-            clientMap foreach (_._2.close)
+            for (_, client) <- clientMap do
+                client.closeWithoutNotifying
         }
 
         logger debug "All clients are closed"
@@ -239,6 +210,29 @@ class TcpServer(
 
         logger debug "Socket is closed"
 
+    private def startConnectionAcceptingThread: Unit =
+        logger debug "Starting connection listening thread..."
+        connectionAcceptingThread.start
+
+    private def startPingingThreadIfNotNull: Unit =
+        if pingingThread != null then
+            logger debug "Starting pinging thread..."
+            pingingThread.start
+
+    private def waitThreadsStarted: Unit =
+        synchronized {
+            while
+                try
+                    wait()
+                catch
+                    case _: InterruptedException => onInterrupted
+
+                connectionAcceptingThread.getState == Thread.State.NEW ||
+                pingingThread                      != null             &&
+                pingingThread.getState             == Thread.State.NEW
+            do ()
+        }
+
     private def stopConnectionAccpetingThread: Unit =
         ThreadUtil.stop(connectionAcceptingThread, Some(logger))
 
@@ -246,34 +240,43 @@ class TcpServer(
         if pingingThread != null then
             ThreadUtil.stop(pingingThread, Some(logger))
 
+    private def onInterrupted: Unit =
+        logger debug "Interrupted"
+        Thread.interrupted
 
-    private class TcpServerClient(
-        val id:     Int,
-        val socket: Socket,
-        var name:   Option[String] = None,
-    ) extends Client:
-        override def closed: Boolean = !open
+    private def onIOException(exception: IOException): Unit =
+        if closed then
+            logger debug "Socket is closed"
+        else
+            onException(exception)
+
+    private def onException(exception: Exception): Unit =
+        logger error exception
+        close
+
+
+    class Client protected[server] (
+                val id:     Int,
+        private val socket: Socket,
+                var name:   Option[String] = None,
+    ) extends ClientTrait:
+        override def closed: Boolean =
+            !open
 
         override def close: Unit =
-            open synchronized {
-                if closed then
-                    return
+            closeWithoutNotifying
 
-                open = false
+            eventListener synchronized {
+                eventListener onDisconnectedByServer this
             }
 
-            logger debug "Closing..."
+        override def address: InetAddress =
+            socket.getInetAddress
 
-            sendCloseCommand
-            closeSocket
-            stopPacketReceivingThread
-            removeFromClients
+        override def server: TcpServer =
+            TcpServer.this
 
-            logger debug "Closed"
-
-        override def address: InetAddress = socket.getInetAddress
-
-        def sendMessage(message: Message): Unit =
+        override def sendMessage(message: Message): Unit =
             ClosedException.checkOpen(this, "Client is closed")
 
             logger debug s"Sending message: $message..."
@@ -288,7 +291,7 @@ class TcpServer(
             catch
                 case e: Exception => onException(e)
 
-        def ping: Unit =
+        override def ping: Unit =
             ClosedException.checkOpen(this, "Client is closed")
 
             logger debug s"Pinging..."
@@ -336,6 +339,24 @@ class TcpServer(
         }
 
         logger debug "Opened"
+        
+
+        protected[server] def closeWithoutNotifying: Unit =
+            open synchronized {
+                if closed then
+                    return
+
+                open = false
+            }
+
+            logger debug "Closing..."
+
+            sendCloseCommand
+            closeSocket
+            stopPacketReceivingThread
+            removeFromClients
+
+            logger debug "Closed"
 
 
         private def inputStream: InputStream =
@@ -402,7 +423,7 @@ class TcpServer(
             logger debug "Received disconnect command..."
 
             sendResponse(code, OK)
-            close
+            closeWithoutNotifying
 
             logger debug "Disconnected"
 
@@ -432,15 +453,14 @@ class TcpServer(
             sendResponse(code, status)
 
         private def nameGood(name: String): Boolean =
-            if !nameValidator.nameGood(name) then
+            if !(nameValidator nameGood name) then
                 return false
             
             val lowerName = name.toLowerCase
 
             clientMap synchronized {
-                return !clientMap.exists(
-                    _._2
-                     .name
+                return !clients.exists(
+                    _.name
                      .map(_.toLowerCase)
                      .getOrElse(null) == lowerName
                 )
@@ -509,7 +529,7 @@ class TcpServer(
                 eventListener onConnectionLost this
             }
 
-            close
+            closeWithoutNotifying
 
         private def closeSocket: Unit =
             logger debug "Closing socket..."

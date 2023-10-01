@@ -12,5 +12,6 @@ trait EventListener:
     def onConnected(client: Client): Unit = ()
     def onSetName(client: Client, oldName: Option[String]): Unit = ()
     def onMessage(client: Client, text: String): Unit = ()
+    def onDisconnectedByServer(client: Client): Unit = ()
     def onDisconnected(client: Client): Unit = ()
     def onConnectionLost(client: Client): Unit = ()

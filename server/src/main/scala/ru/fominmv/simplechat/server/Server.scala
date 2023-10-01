@@ -3,16 +3,21 @@ package ru.fominmv.simplechat.server
 
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.core.util.Closeable
+import ru.fominmv.simplechat.core.util.Openable
 import ru.fominmv.simplechat.core.Message
 import ru.fominmv.simplechat.server.event.EventListener
 
 
-trait Server extends Closeable:
+trait Server extends Openable:
     def name:          String
     def protocol:      Protocol
     def eventListener: EventListener
-    def clients:       List[Client]
+    def clients:       Set[Client]
+    def state:         State
+
+    override def closed: Boolean =
+        state == State.CLOSING ||
+        state == State.CLOSED
 
     @throws[ClosedException]("When closed")
     def pingClients: Unit =
@@ -44,7 +49,7 @@ trait Server extends Closeable:
             client <- clients
             if !(except contains client.id)
         do
-            client.ping
+            client sendMessage message
 
     def makeMessage(text: String): Message =
         Message(name, text)
