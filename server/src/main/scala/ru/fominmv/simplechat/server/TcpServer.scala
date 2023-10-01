@@ -476,7 +476,7 @@ class TcpServer(
                 logger debug "Reponse accepted"
                 return
 
-            logger error "Response with such a code wasn't expected"
+            logger debug "Response with such a code wasn't expected"
 
             throw ProtocolException()
 
