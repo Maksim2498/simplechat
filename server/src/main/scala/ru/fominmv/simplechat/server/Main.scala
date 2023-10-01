@@ -115,7 +115,7 @@ object Main:
                     if v >= 0.seconds then
                         success
                     else
-                        failure("Option --max-pending-commands must be non-negative")
+                        failure("Option --ping-interval must be non-negative")
                 ),
 
             opt[Protocol]('P', "protocol")
