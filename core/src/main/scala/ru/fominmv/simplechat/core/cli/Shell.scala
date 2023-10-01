@@ -48,9 +48,21 @@ trait Shell extends Closeable:
         action      = _ => printHelp
     )
 
+    protected val CLOSE_COMMAND = Command(
+        name        = "close",
+        description = Some("Closes shell"),
+        action      = _ => close
+    )
+
 
     protected def greeting: Unit =
-        console print "Press Ctrl-C to quit"
+        if commands contains CLOSE_COMMAND then
+            console print s"To quit enter /${CLOSE_COMMAND.name} or press Ctrl-C"
+        else
+            console print "To quit press Ctrl-C"
+
+        if commands contains HELP_COMMAND then
+            console print s"Too see full command list enter /${HELP_COMMAND.name}"
 
     protected def farewell: Unit =
         console print "Bye!"

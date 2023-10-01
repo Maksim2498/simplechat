@@ -19,10 +19,6 @@ class Shell(val server: Server) extends ShellTrait:
         COMMANDS
 
 
-    override protected def greeting: Unit =
-        console print s"To quit press enter /${STOP_COMMAND.name} Ctrl-C"
-        console print s"To see full command list enter /${HELP_COMMAND.name}"
-
     override protected def onNonCommandInput(input: String): Unit =
         if input.isBlank then
             return
@@ -32,12 +28,6 @@ class Shell(val server: Server) extends ShellTrait:
 
 
     private var open = true
-
-    private val STOP_COMMAND = Command(
-        name        = "stop",
-        description = Some("Stops shell and server"),
-        action      = _ => close
-    )
 
     private val KICK_COMMAND = Command(
         name        = "kick",
@@ -90,7 +80,7 @@ class Shell(val server: Server) extends ShellTrait:
     )
 
     private val COMMANDS = Set(
-        STOP_COMMAND,
+        CLOSE_COMMAND,
         HELP_COMMAND,
         KICK_COMMAND,
         KICK_ALL_COMMAND,
