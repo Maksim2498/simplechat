@@ -134,6 +134,7 @@ object Main:
             pingInterval       = config.pingInterval,
             protocol           = config.protocol,
         )
+
         val server = builder.builderServer
 
         server.open
