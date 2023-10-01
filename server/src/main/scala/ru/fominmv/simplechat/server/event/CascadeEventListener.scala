@@ -41,8 +41,8 @@ class CascadeEventListener extends EventListener:
 
 object CascadeEventListener:
     def apply(eventListeners: EventListener*): CascadeEventListener =
-        val listener = new CascadeEventListener()
+        val eventListener = new CascadeEventListener()
 
-        listener.eventListeners addAll eventListeners
+        eventListener.eventListeners addAll eventListeners
 
-        listener
+        eventListener
