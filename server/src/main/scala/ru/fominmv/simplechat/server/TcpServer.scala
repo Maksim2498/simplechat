@@ -45,6 +45,7 @@ import ru.fominmv.simplechat.server.event.EventListener
 import ru.fominmv.simplechat.server.Config.*
 import ru.fominmv.simplechat.server.State.*
 import ru.fominmv.simplechat.server.{Client => ClientTrait}
+import ru.fominmv.simplechat.core.protocol.ServerPacket
 
 
 class TcpServer(
@@ -392,7 +393,7 @@ class TcpServer(
 
                     val packet = protocol readClientPacket inputStream
 
-                    logger debug "Received packet"
+                    logger debug "Packet received"
 
                     onPacket(packet)
                 catch
@@ -493,27 +494,27 @@ class TcpServer(
                 logger error "Response with such a code wasn't expected"
                 throw ProtocolException()
 
-        private def sendResponse(code: Short, status: Status): Unit =
-            sendResponse(Response(code, status))
+            sendResponse(code, status)
 
-        private def sendResponse(response: Response): Unit =
-            outputStream synchronized {
-                protocol.writePacket(response, outputStream)
-            }
+        private def sendResponse(code: Short, status: Status): Unit =
+            logger debug s"Sending response: $code - $status"
+            sendPacket(Response(code, status))
+            logger debug "Reponse sent"
 
         private def sendCloseCommand: Unit =
             sendCommand(CloseServerCommand(0))
 
         private def sendCommand(command: ServerCommand): Unit =
             logger debug s"Sending command with code ${command.code}..."
+            sendPacket(command)
+            logger debug "Command is sent"
 
+        private def sendPacket(command: ServerPacket): Unit =
             outputStream synchronized {
                 protocol.writePacket(command, outputStream)
             }
 
-            logger debug "Command is sent"
-
-        private  def onInterrupted: Unit =
+        private def onInterrupted: Unit =
             logger debug "Interrupted"
             Thread.interrupted
 
@@ -526,11 +527,11 @@ class TcpServer(
         private def onException(exception: Exception): Unit =
             logger error exception
 
+            closeWithoutNotifying
+
             eventListener synchronized {
                 eventListener onConnectionLost this
             }
-
-            closeWithoutNotifying
 
         private def closeSocket: Unit =
             logger debug "Closing socket..."
