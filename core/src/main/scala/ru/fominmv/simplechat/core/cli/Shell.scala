@@ -42,6 +42,13 @@ trait Shell extends Closeable:
     def commands: Set[Command]
 
 
+    protected val HELP_COMMAND = Command(
+        name        = "help",
+        description = Some("Prints help message"),
+        action      = _ => printHelp
+    )
+
+
     protected def greeting: Unit =
         console print "Press Ctrl-C to quit"
 

@@ -39,12 +39,6 @@ class Shell(val server: Server) extends ShellTrait:
         action      = _ => close
     )
 
-    private val HELP_COMMAND = Command(
-        name        = "help",
-        description = Some("Prints help message"),
-        action      = _ => printHelp
-    )
-
     private val KICK_COMMAND = Command(
         name        = "kick",
         description = Some("Kicks specified user"),
