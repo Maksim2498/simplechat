@@ -34,8 +34,11 @@ Options starting with `--` represent multi-letter (long) options.
 Short options can be grouped like this: `-hd` -- this the same as passing
 two options like this: `-h -d`.
 
-If long option requires and argument you can pass it separating with space or `=`.
-It will look like this: `--port=1502` or `--port 1502`.
+If short option requires an argument you can pass it seprating with space or right after it.
+It will look like this: `-p 1502` or `-p1502`
+
+If long option requires an argument you can pass it separating with space or `=`.
+It will look like this: `--port 1502` or `--port=1502`.
 
 ## Options
 
