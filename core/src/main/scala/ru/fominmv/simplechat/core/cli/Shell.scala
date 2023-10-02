@@ -18,15 +18,15 @@ trait Shell extends Closeable:
 
         while !closed do
             try {
-                val input = console read prompt
+                val input = readInput()
 
                 try
                     if input.trim startsWith commandPrefix then
                         onCommandInput(input)
                     else
-                        onNonCommandInput(input)
+                        onInput(input)
                 catch
-                    case e: Exception => console print s"$RED${e.getMessage}$RESET"
+                    case e: Exception => onInputException(e)
             } catch
                 case _: InterruptedException => onInterruptedException
                 case _: EOFException         => onEOFException
@@ -67,13 +67,19 @@ trait Shell extends Closeable:
     protected def farewell: Unit =
         console print "Bye!"
 
+    def readInput: String =
+        readInput()
+
+    protected def readInput(buffer: String = ""): String =
+        console.read(prompt, buffer)
+
     protected def onInterruptedException: Unit =
         close
 
     protected def onEOFException: Unit =
         close
 
-    protected def onNonCommandInput(input: String): Unit = ()
+    protected def onInput(input: String): Unit = ()
 
     @throws[IllegalArgumentException]("On bad input")
     protected def onCommandInput(input: String): Unit =
@@ -93,6 +99,9 @@ trait Shell extends Closeable:
             throw IllegalArgumentException(s"Command /$commandName takes ${command.args.length} argument(s) not ${args.length - 1}")
 
         command action args.drop(1).toList
+
+    protected def onInputException(exception: Exception): Unit =
+        console print s"$RED${exception.getMessage}$RESET"
     
     protected def printHelp: Unit =
         printHelp()

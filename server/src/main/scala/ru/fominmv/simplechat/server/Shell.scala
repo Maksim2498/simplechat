@@ -20,7 +20,7 @@ class Shell(val server: Server) extends ShellTrait:
         COMMANDS
 
 
-    override protected def onNonCommandInput(input: String): Unit =
+    override protected def onInput(input: String): Unit =
         if input.isBlank then
             return
 
@@ -87,3 +87,6 @@ class Shell(val server: Server) extends ShellTrait:
         KICK_ALL_COMMAND,
         LIST_COMMAND,
     )
+
+
+    console.showInput = false

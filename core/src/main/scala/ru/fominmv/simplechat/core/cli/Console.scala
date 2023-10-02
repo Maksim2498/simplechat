@@ -8,11 +8,13 @@ import java.io.{EOFException, IOError}
 import org.jline.terminal.Terminal.Signal
 import org.jline.terminal.TerminalBuilder
 import org.jline.reader.{
+    LineReader,
     LineReaderBuilder,
     EndOfFileException,
     UserInterruptException,
 }
 
+import ru.fominmv.simplechat.core.cli.error.ConsoleInterruptedException
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.util.Closeable
 import ru.fominmv.simplechat.core.util.RuntimeUtil.{
@@ -22,54 +24,52 @@ import ru.fominmv.simplechat.core.util.RuntimeUtil.{
 
 
 trait Console extends Closeable:
-    @throws[InterruptedException]("When input process is interrupted (if user pressed Ctrl-C for example)")
+    @throws[ConsoleInterruptedException]("When input process is interrupted (if user pressed Ctrl-C for example)")
     @throws[EOFException]("When EOF was reached (or user pressed Ctrl-D for example)")
     @throws[IOError]("When some other I/O error occurred")
     @throws[ClosedException]("When closed")
     def read: String =
         read()
 
-    @throws[InterruptedException]("When input process is interrupted (if user pressed Ctrl-C for example)")
+    @throws[ConsoleInterruptedException]("When input process is interrupted (if user pressed Ctrl-C for example)")
     @throws[EOFException]("When EOF was reached (or user pressed Ctrl-D for example)")
     @throws[IOError]("When some other I/O error occurred")
     @throws[ClosedException]("When closed")
-    def read(prompt: String = ""): String
+    def read(prompt: String = "", buffer: String = ""): String
 
     @throws[ClosedException]("When closed")
     def print(text: String = ""): Unit
 
-    def pause: Unit
-
-    def resume: Unit
-
     def interrupt: Unit
 
+    def showInput: Boolean
+    def showInput_=(value: Boolean): Unit
 
 object Console extends Console:
     // For Java interoperability
     def instance: Console = this
 
-    override def read(prompt: String = ""): String =
+    override def read(prompt: String = "", buffer: String = ""): String =
         ClosedException.checkOpen(this, "Console is closed")
 
         try
-            lineReader readLine prompt
+            lineReader.readLine(prompt, null, buffer)
         catch
-            case _: UserInterruptException => throw InterruptedException()
-            case _: EndOfFileException     => throw EOFException()
+            case uie: UserInterruptException => throw ConsoleInterruptedException(uie.getPartialLine)
+            case _: EndOfFileException       => throw EOFException()
 
     override def print(text: String = ""): Unit =
         ClosedException.checkOpen(this, "Console is closed")
         lineReader printAbove text
 
-    override def pause: Unit =
-        terminal.pause
-
-    override def resume: Unit =
-        terminal.resume
-
     override def interrupt: Unit =
         terminal raise Signal.INT
+
+    override def showInput: Boolean =
+        !(lineReader isSet LineReader.Option.ERASE_LINE_ON_FINISH)
+
+    override def showInput_=(value: Boolean): Unit =
+        lineReader.option(LineReader.Option.ERASE_LINE_ON_FINISH, !value)
 
     override def closed: Boolean =
         !open
