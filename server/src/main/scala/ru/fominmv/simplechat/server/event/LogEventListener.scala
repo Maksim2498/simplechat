@@ -7,38 +7,51 @@ import ru.fominmv.simplechat.server.Client
 
 
 object LogEventListener extends EventListener:
-    override def onPreOpen: Unit =
-        logger info "Opening server..."
+    override def on(event: Event): Unit =
+        event match
+            case PreOpenEvent() => 
+                logger info "Opening server..."
 
-    override def onPostOpen: Unit =
-        logger info "Opened"
+            case PostOpenEvent() =>
+                logger info "Opened"
 
-    override def onPreClose: Unit =
-        logger info "Closing server..."
+            case PreCloseEvent() =>
+                logger info "Closing server..."
 
-    override def onPostClose: Unit =
-        logger info "Closed"
+            case PostCloseEvent() =>
+                logger info "Closed"
 
-    override def onConnected(client: Client): Unit =
-        logger info s"${client.fullname} connected from ${client.address}"
+            case PrePingClientsEvent(except) =>
 
-    override def onSetName(client: Client, oldName: Option[String]): Unit =
-        logger info s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}"
+            case PostPingClientsEvent(except) =>
 
-    override def onMessage(client: Client, text: String): Unit =
-        logger info s"${client.fullname}: $text"
+            case PreBroadcastMessageEvent(message, except) =>
 
-    override def onDisconnectedByServer(client: Client): Unit =
-        logger info s"${client.fullname} was disconnected by server"
+            case PostBroadcastMessageEvent(message, except) =>
+                logger info s"${message.author}: ${message.text}"
 
-    override def onDisconnected(client: Client): Unit =
-        logger info s"${client.fullname} disconnected"
+            case ConnectedEvent(client) =>
+                logger info s"${client.fullname} connected from ${client.address}"
 
-    override def onConnectionLost(client: Client): Unit =
-        logger info s"Lost connection with ${client.fullname}"
-    
-    override def onFatalError(client: Client): Unit =
-        logger error s"${client.fullname} reponded with fatal error"
+            case PingEvent(client) =>
 
+            case SetNameEvent(client, oldName) =>
+                logger info s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}"
+
+            case MessageEvent(client, text) =>
+                logger info s"${client.fullname}: $text"
+
+            case DisconnectedByServerEvent(client) =>
+                logger info s"${client.fullname} was disconnected by server"
+
+            case DisconnectedEvent(client) =>
+                logger info s"${client.fullname} disconnected"
+
+            case ConnectionLostEvent(client) =>
+                logger info s"Lost connection with ${client.fullname}"
+
+            case FatalErrorEvent(client) =>
+                logger error s"${client.fullname} reponded with fatal error"
+        
 
     private val logger = LogManager getLogger getClass

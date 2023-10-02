@@ -24,14 +24,7 @@ trait Server extends Openable:
         pingClients()
 
     @throws[ClosedException]("When closed")
-    def pingClients(except: Set[Int] = Set()): Unit =
-        ClosedException.checkOpen(this, "Server is closed")
-
-        for
-            client <- clients
-            if !(except contains client.id)
-        do
-            client.ping
+    def pingClients(except: Set[Int] = Set()): Unit;
 
     @throws[ClosedException]("When closed")
     def broadcastMessage(text: String): Unit =
@@ -42,14 +35,7 @@ trait Server extends Openable:
         broadcastMessage(makeMessage(text), except)
 
     @throws[ClosedException]("When closed")
-    def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
-        ClosedException.checkOpen(this, "Server is closed")
-
-        for
-            client <- clients
-            if !(except contains client.id)
-        do
-            client sendMessage message
+    def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit;
 
     def makeMessage(text: String): Message =
         Message(name, text)

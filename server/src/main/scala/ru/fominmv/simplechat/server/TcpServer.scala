@@ -62,6 +62,36 @@ class TcpServer(
     override val protocol:           Protocol             = DEFAULT_PROTOCOL,
     override val eventListener:      CascadeEventListener = CascadeEventListener(),
 ) extends Server:
+    override def pingClients(except: Set[Int] = Set()): Unit =
+        ClosedException.checkOpen(this, "Server is closed")
+
+        concurentEventListener publishPrePingClients except
+
+        _clients synchronized {
+            for
+                (id, client) <- _clients
+                if !(except contains id)
+            do
+                client.ping
+        }
+
+        concurentEventListener publishPostPingClients except
+
+    override def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
+        ClosedException.checkOpen(this, "Server is closed")
+
+        concurentEventListener.publishPreBroadcastMessage(message, except)
+
+        _clients synchronized {
+            for
+                (id, client) <- _clients
+                if !(except contains id)
+            do
+                client sendMessage message
+        }
+
+        concurentEventListener.publishPostBroadcastMessage(message, except)
+
     override def state: State =
         _state
 
@@ -73,7 +103,7 @@ class TcpServer(
     override def open: Unit =
         _state synchronized {
             ClosedException.checkOpen(this, "Server is closed")
-            concurentEventListener.onPreOpen
+            concurentEventListener.publishPreOpen
             _state = OPENING
         }
 
@@ -87,14 +117,14 @@ class TcpServer(
 
         _state = OPEN
 
-        concurentEventListener.onPostOpen
+        concurentEventListener.publishPostOpen
 
     override def close: Unit =
         _state synchronized {
             if closed then
                 return
 
-            concurentEventListener.onPreClose
+            concurentEventListener.publishPreClose
 
             _state = CLOSING
         }
@@ -110,7 +140,7 @@ class TcpServer(
 
         _state = CLOSED
 
-        concurentEventListener.onPostClose
+        concurentEventListener.publishPostClose
 
 
     @volatile
@@ -193,7 +223,7 @@ class TcpServer(
 
                 val client = new Client(clientId, clientSocket)
 
-                concurentEventListener onConnected client
+                concurentEventListener publishConnected client
             catch
                 case e: Exception => onAnyException(e)
 
@@ -279,7 +309,7 @@ class TcpServer(
 
         override def close: Unit =
             closeWithoutNotifying(true)
-            concurentEventListener onDisconnectedByServer this
+            concurentEventListener publishDisconnectedByServer this
 
         override def address: InetAddress =
             socket.getInetAddress
@@ -423,6 +453,8 @@ class TcpServer(
             
             logger debug "Pong"
 
+            concurentEventListener publishPing this
+
         private def onCloseCommand(code: Short): Unit =
             logger debug s"Received close command: $code"
 
@@ -431,7 +463,7 @@ class TcpServer(
 
             logger debug "Disconnected"
 
-            concurentEventListener onDisconnected this
+            concurentEventListener publishDisconnected this
 
         private def onSetNameCommand(code: Short, name: String): Unit =
             logger debug s"Received set name command: $code - \"${escape(name)}\"..."
@@ -444,7 +476,7 @@ class TcpServer(
 
                     logger debug "The name is accepted"
 
-                    concurentEventListener.onSetName(this, oldName)
+                    concurentEventListener.publishSetName(this, oldName)
 
                     OK
                 else
@@ -476,7 +508,7 @@ class TcpServer(
                 ERROR
             else
                 logger debug "The message is accepted"
-                concurentEventListener.onMessage(this, text)
+                concurentEventListener.publishMessage(this, text)
                 OK
 
             sendResponse(code, status)
@@ -487,7 +519,7 @@ class TcpServer(
             if status == FATAL then
                 logger debug "Client responded fith fatal error"
                 closeWithoutNotifying
-                concurentEventListener onFatalError this
+                concurentEventListener publishFatalError this
                 return
 
             if pendingCommandCodes == null || (pendingCommandCodes remove code) then
@@ -576,7 +608,7 @@ class TcpServer(
         private def onException(exception: Exception): Unit =
             logger error exception
             closeWithoutNotifying(true)
-            concurentEventListener onConnectionLost this
+            concurentEventListener publishConnectionLost this
 
 
 private val logger = LogManager getLogger classOf[TcpServer]

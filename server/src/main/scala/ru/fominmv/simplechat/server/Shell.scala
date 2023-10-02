@@ -1,10 +1,15 @@
 package ru.fominmv.simplechat.server
 
 
+import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.cli.{
     Command,
     Shell => ShellTrait,
 }
+import ru.fominmv.simplechat.server.event.EventListener
+import ru.fominmv.simplechat.server.event.Event
+import ru.fominmv.simplechat.server.event.PostCloseEvent
+import ru.fominmv.simplechat.server.event.PreCloseEvent
 
 
 class Shell(val server: Server) extends ShellTrait:
@@ -24,8 +29,10 @@ class Shell(val server: Server) extends ShellTrait:
         if input.isBlank then
             return
 
+        if server.closed then
+            throw ClosedException("Server is closing")
+
         server broadcastMessage input
-        console print s"${server.name}: ${input}"
 
 
     private var open = true
@@ -90,3 +97,9 @@ class Shell(val server: Server) extends ShellTrait:
 
 
     console.showInput = false
+
+    server.eventListener.eventListeners addOne new EventListener:
+        override def on(event: Event): Unit =
+            event match
+                case PostCloseEvent() => close
+                case _ =>
