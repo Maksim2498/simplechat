@@ -3,7 +3,7 @@ package ru.fominmv.simplechat.client
 
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.core.util.Openable
+import ru.fominmv.simplechat.core.util.lifecycle.Openable
 import ru.fominmv.simplechat.core.Message
 import ru.fominmv.simplechat.client.event.CascadeEventListener
 

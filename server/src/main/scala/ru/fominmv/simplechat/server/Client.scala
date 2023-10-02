@@ -4,7 +4,7 @@ package ru.fominmv.simplechat.server
 import java.net.InetAddress
 
 import ru.fominmv.simplechat.core.error.ClosedException
-import ru.fominmv.simplechat.core.util.Closeable
+import ru.fominmv.simplechat.core.util.lifecycle.Closeable
 import ru.fominmv.simplechat.core.Message
 
 

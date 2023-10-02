@@ -6,7 +6,7 @@ import scala.io.AnsiColor.*
 import java.io.EOFException
 
 import ru.fominmv.simplechat.core.error.ClosedException
-import ru.fominmv.simplechat.core.util.Closeable
+import ru.fominmv.simplechat.core.util.lifecycle.Closeable
 
 
 trait Shell extends Closeable:

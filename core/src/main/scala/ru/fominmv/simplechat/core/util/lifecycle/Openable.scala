@@ -1,4 +1,4 @@
-package ru.fominmv.simplechat.core.util
+package ru.fominmv.simplechat.core.util.lifecycle
 
 
 trait Openable extends Closeable:

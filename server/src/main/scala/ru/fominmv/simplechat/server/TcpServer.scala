@@ -38,6 +38,8 @@ import ru.fominmv.simplechat.core.protocol.{
     CloseServerCommand,
     SendMessageServerCommand
 }
+import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
+import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
@@ -47,7 +49,6 @@ import ru.fominmv.simplechat.server.event.{
     CascadeEventListener,
 }
 import ru.fominmv.simplechat.server.Config.*
-import ru.fominmv.simplechat.server.State.*
 import ru.fominmv.simplechat.server.{Client => ClientTrait}
 import ru.fominmv.simplechat.core.protocol.ServerPacket
 
@@ -92,8 +93,8 @@ class TcpServer(
 
         concurentEventListener.publishPostBroadcastMessage(message, except)
 
-    override def state: State =
-        _state
+    override def lifecyclePhase: LifecyclePhase =
+        _lifecyclePhase
 
     override def clients: Set[ClientTrait] =
         _clients synchronized {
@@ -101,10 +102,10 @@ class TcpServer(
         }
 
     override def open: Unit =
-        _state synchronized {
+        _lifecyclePhase synchronized {
             ClosedException.checkOpen(this, "Server is closed")
             concurentEventListener.publishPreOpen
-            _state = OPENING
+            _lifecyclePhase = OPENING
         }
 
         logger debug "Opening..."
@@ -115,18 +116,18 @@ class TcpServer(
 
         logger debug "Opened"
 
-        _state = OPEN
+        _lifecyclePhase = OPEN
 
         concurentEventListener.publishPostOpen
 
     override def close: Unit =
-        _state synchronized {
+        _lifecyclePhase synchronized {
             if closed then
                 return
 
             concurentEventListener.publishPreClose
 
-            _state = CLOSING
+            _lifecyclePhase = CLOSING
         }
 
         logger debug "Closing..."
@@ -138,13 +139,13 @@ class TcpServer(
 
         logger debug "Closed"
 
-        _state = CLOSED
+        _lifecyclePhase = CLOSED
 
         concurentEventListener.publishPostClose
 
 
     @volatile
-    private var _state                    = NEW
+    private var _lifecyclePhase           = NEW
 
     @volatile
     private var lastClientId              = 0
