@@ -73,11 +73,14 @@ case class BinaryResponse(
     code:     Short,
     statusId: Byte,
 ) extends BinaryPacket:
-    override def typeId: Byte = BinaryResponse.TYPE_ID
+    override def typeId: Byte =
+        BinaryResponse.TYPE_ID
 
-    override def toClientPacket: Response = toResponse
+    override def toClientPacket: Response =
+        toResponse
 
-    override def toServerPacket: Response = toResponse
+    override def toServerPacket: Response =
+        toResponse
 
     override def write(stream: OutputStream, charset: Charset = StandardCharsets.UTF_8): Unit =
         val dataStream = DataOutputStream(stream)

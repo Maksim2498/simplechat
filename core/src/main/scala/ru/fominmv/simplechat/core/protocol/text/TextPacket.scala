@@ -58,13 +58,17 @@ case class TextResponse(
     code:       Short,
     statusName: String,
 ) extends TextPacket:
-    override def typeName: String = TextResponse.TYPE_NAME
+    override def typeName: String =
+        TextResponse.TYPE_NAME
 
-    override def toClientPacket: Response = toResponse
+    override def toClientPacket: Response =
+        toResponse
 
-    override def toServerPacket: Response = toResponse
+    override def toServerPacket: Response =
+        toResponse
 
-    override def toString: String = s"${typeName} ${code} ${statusName}"
+    override def toString: String =
+        s"${typeName} ${code} ${statusName}"
 
 
     private def toResponse: Response =
@@ -163,7 +167,7 @@ case class TextCommand(
             case _ => throw UnsupportedServerCommandException()
 
     override def toString: String =
-        s"$code $name ${args map (a => s"\"${a.escape}\"") mkString " "}"
+        s"$typeName $code $name ${args map (a => s"\"${a.escape}\"") mkString " "}"
 
 object TextCommand:
     val TYPE_NAME                        = "c"
@@ -310,18 +314,24 @@ private case class ShortToken(
 
 private object ShortToken:
     def parse(string: String): ShortToken =
-        val digits = string takeWhile (_.isDigit)
+        val negative = string startsWith "-"
+        val digits   = (if negative then string substring 1 else string) takeWhile (_.isDigit)
+        val length   = if negative then digits.length + 1 else digits.length
 
-        if  digits.isEmpty || !Token.goodBoundary(string, digits.length) then
+        if  digits.isEmpty || !Token.goodBoundary(string, length) then
             throw IllegalArgumentException()
         
-        val value = digits.map(_.asDigit)
+        var value = digits.map(_.asDigit)
                           .reduce(_ * 10 + _)
 
-        ShortToken(value.toShort, digits.length)
+        if negative then
+            value *= -1
+
+        ShortToken(value.toShort, length)
 
     def startsWith(char: Char): Boolean =
-        char.isDigit
+        char.isDigit ||
+        char == '-'
 
 
 private case class StringToken(

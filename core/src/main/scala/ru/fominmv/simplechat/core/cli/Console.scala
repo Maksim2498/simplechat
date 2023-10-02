@@ -5,6 +5,7 @@ import scala.annotation.targetName
 
 import java.io.{EOFException, IOError}
 
+import org.jline.terminal.Terminal.Signal
 import org.jline.terminal.TerminalBuilder
 import org.jline.reader.{
     LineReaderBuilder,
@@ -37,6 +38,12 @@ trait Console extends Closeable:
     @throws[ClosedException]("When closed")
     def print(text: String = ""): Unit
 
+    def pause: Unit
+
+    def resume: Unit
+
+    def interrupt: Unit
+
 
 object Console extends Console:
     // For Java interoperability
@@ -54,6 +61,15 @@ object Console extends Console:
     override def print(text: String = ""): Unit =
         ClosedException.checkOpen(this, "Console is closed")
         lineReader printAbove text
+
+    override def pause: Unit =
+        terminal.pause
+
+    override def resume: Unit =
+        terminal.resume
+
+    override def interrupt: Unit =
+        terminal raise Signal.INT
 
     override def closed: Boolean =
         !open
