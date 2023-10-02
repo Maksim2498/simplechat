@@ -41,29 +41,34 @@ import ru.fominmv.simplechat.core.protocol.{
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
-import ru.fominmv.simplechat.server.event.{EventListener, ConcurentEventListener}
+import ru.fominmv.simplechat.server.event.{
+    EventListener,
+    ConcurentEventListener,
+    CascadeEventListener,
+}
 import ru.fominmv.simplechat.server.Config.*
 import ru.fominmv.simplechat.server.State.*
 import ru.fominmv.simplechat.server.{Client => ClientTrait}
 import ru.fominmv.simplechat.core.protocol.ServerPacket
-import ru.fominmv.simplechat.server.event.LogEventListener.onDisconnectedByServer
 
 
 class TcpServer(
-             val port:               Int            = DEFAULT_PORT,
-             val backlog:            Int            = DEFAULT_BACKLOG,
-             val maxPendingCommands: Int            = DEFAULT_MAX_PENDING_COMMANDS,
-             val pingInterval:       FiniteDuration = DEFAULT_PING_INTERVAL,
-             var nameValidator:      NameValidator  = DefaultNameValidator,
-    override val name:               String         = DEFAULT_NAME,
-    override val protocol:           Protocol       = DEFAULT_PROTOCOL,
-    override val eventListener:      EventListener  = new EventListener {},
+             val port:               Int                  = DEFAULT_PORT,
+             val backlog:            Int                  = DEFAULT_BACKLOG,
+             val maxPendingCommands: Int                  = DEFAULT_MAX_PENDING_COMMANDS,
+             val pingInterval:       FiniteDuration       = DEFAULT_PING_INTERVAL,
+             var nameValidator:      NameValidator        = DefaultNameValidator,
+    override val name:               String               = DEFAULT_NAME,
+    override val protocol:           Protocol             = DEFAULT_PROTOCOL,
+    override val eventListener:      CascadeEventListener = CascadeEventListener(),
 ) extends Server:
     override def state: State =
         _state
 
     override def clients: Set[ClientTrait] =
-        clientMap.values.toSet
+        _clients synchronized {
+            _clients.values.toSet
+        }
 
     override def open: Unit =
         _state synchronized {
@@ -74,7 +79,7 @@ class TcpServer(
 
         logger debug "Opening..."
 
-        startConnectionAcceptingThread
+        startConnectionListeningThread
         startPingingThreadIfNeeded
         waitThreadsStarted
 
@@ -98,7 +103,7 @@ class TcpServer(
 
         closeClients
         closeSocket
-        stopConnectionAccpetingThread
+        stopConnectionListeningThread
         stopPingingThread
 
         logger debug "Closed"
@@ -116,9 +121,9 @@ class TcpServer(
 
     private val concurentEventListener    = ConcurentEventListener(eventListener)
     private val socket                    = ServerSocket(port, backlog)
-    private val clientMap                 = HashMap[Int, this.Client]()
-    private val connectionAcceptingThread = Thread(
-        () => connectionAcceptingThreadBody,
+    private val _clients                  = HashMap[Int, this.Client]()
+    private val connectionListeningThread = Thread(
+        () => connectionListeningThreadBody,
         "Connection Listener",
     )
     private val pingingThread             = if pingInterval != 0.seconds then
@@ -137,7 +142,30 @@ class TcpServer(
         throw IllegalArgumentException("pingClientsEvery must be non-negative")
 
 
-    private def connectionAcceptingThreadBody: Unit =
+    private def startConnectionListeningThread: Unit =
+        logger debug "Starting connection listening thread..."
+        connectionListeningThread.start
+
+    private def startPingingThreadIfNeeded: Unit =
+        if pingingThread != null then
+            logger debug "Starting pinging thread..."
+            pingingThread.start
+
+    private def waitThreadsStarted: Unit =
+        synchronized {
+            while
+                try
+                    wait()
+                catch
+                    case _: InterruptedException => onInterruptedException
+
+                connectionListeningThread.getState == Thread.State.NEW ||
+                pingingThread                      != null             &&
+                pingingThread.getState             == Thread.State.NEW
+            do ()
+        }
+
+    private def connectionListeningThreadBody: Unit =
         logger debug "Started"
 
         synchronized {
@@ -149,19 +177,25 @@ class TcpServer(
                 logger debug "Waiting for connections..."
 
                 val clientSocket = socket.accept
+
+                logger debug s"Received connection from ${clientSocket.getInetAddress}"
+
+                if closed then
+                    logger debug "Server is closing"
+                    logger debug "Closing connection..."
+                    clientSocket.close
+                    logger debug "Closed"
+                    return
+
                 val clientId     = lastClientId
 
                 lastClientId += 1
-
-                logger debug s"Received connection from ${clientSocket.getInetAddress}"
 
                 val client = new Client(clientId, clientSocket)
 
                 concurentEventListener onConnected client
             catch
-                case ioe: IOException          => onIOException(ioe)
-                case _:   InterruptedException => onInterrupted
-                case e:   Exception            => onException(e)
+                case e: Exception => onAnyException(e)
 
     private def pingingThreadBody: Unit =
         logger debug "Started"
@@ -176,16 +210,14 @@ class TcpServer(
                 Thread sleep pingInterval.toMillis
                 pingClients
             catch
-                case ioe: IOException          => onIOException(ioe)
-                case _:   InterruptedException => onInterrupted
-                case e:   Exception            => onException(e)
+                case e: Exception => onAnyException(e)
 
     private def closeClients: Unit =
         logger debug "Closing all clients..."
 
-        clientMap synchronized {
-            for (_, client) <- clientMap do
-                client.closeWithoutNotifying
+        _clients synchronized {
+            for (_, client) <- _clients do
+                client closeWithoutNotifying true
         }
 
         logger debug "All clients are closed"
@@ -200,43 +232,34 @@ class TcpServer(
 
         logger debug "Socket is closed"
 
-    private def startConnectionAcceptingThread: Unit =
-        logger debug "Starting connection listening thread..."
-        connectionAcceptingThread.start
-
-    private def startPingingThreadIfNeeded: Unit =
-        if pingingThread != null then
-            logger debug "Starting pinging thread..."
-            pingingThread.start
-
-    private def waitThreadsStarted: Unit =
-        synchronized {
-            while
-                try
-                    wait()
-                catch
-                    case _: InterruptedException => onInterrupted
-
-                connectionAcceptingThread.getState == Thread.State.NEW ||
-                pingingThread                      != null             &&
-                pingingThread.getState             == Thread.State.NEW
-            do ()
-        }
-
-    private def stopConnectionAccpetingThread: Unit =
-        ThreadUtil.stop(connectionAcceptingThread, Some(logger))
+    private def stopConnectionListeningThread: Unit =
+        ThreadUtil.stop(connectionListeningThread, Some(logger))
 
     private def stopPingingThread: Unit =
         if pingingThread != null then
             ThreadUtil.stop(pingingThread, Some(logger))
 
-    private def onInterrupted: Unit =
-        logger debug "Interrupted"
+    private def onAnyException(exception: Exception): Unit =
+        exception match
+            case ie:   InterruptedException   => onInterruptedException(ie)
+            case iioe: InterruptedIOException => onInterruptedIOException(iioe)
+            case ce:   ClosedException        => onClosedException(ce)
+            case ioe:  IOException            => onIOException(ioe)
+            case e:    Exception              => onException(e)
+
+    private def onInterruptedException(exception: InterruptedException): Unit =
+        logger debug "Aborted: interrupted"
         Thread.interrupted
+
+    private def onInterruptedIOException(exception: InterruptedIOException): Unit =
+        logger debug "Aborted: I/O interrupted"
+
+    private def onClosedException(exception: ClosedException): Unit =
+        logger debug s"Aborted: ${exception.getMessage}"
 
     private def onIOException(exception: IOException): Unit =
         if closed then
-            logger debug "Socket is closed"
+            logger debug "Aborted: socket is closed"
         else
             onException(exception)
 
@@ -255,7 +278,7 @@ class TcpServer(
             !open
 
         override def close: Unit =
-            closeWithoutNotifying
+            closeWithoutNotifying(true)
             concurentEventListener onDisconnectedByServer this
 
         override def address: InetAddress =
@@ -267,30 +290,16 @@ class TcpServer(
         override def sendMessage(message: Message): Unit =
             ClosedException.checkOpen(this, "Client is closed")
 
-            logger debug s"Sending message: $message..."
-
             try
-                val code    = makeNextCommandCode
-                val command = SendMessageServerCommand(code, message)
-
-                sendCommand(command)
-
-                logger debug "The message is sent"
+                sendSendMessageCommand(makeNextCommandCode, message)
             catch
                 case e: Exception => onException(e)
 
         override def ping: Unit =
             ClosedException.checkOpen(this, "Client is closed")
 
-            logger debug s"Pinging..."
-
             try
-                val code    = makeNextCommandCode
-                val command = PingServerCommand(code)
-
-                sendCommand(command)
-
-                logger debug "Pinged"
+                sendPingCommand(makeNextCommandCode)
             catch
                 case e: Exception => onException(e)
 
@@ -316,35 +325,45 @@ class TcpServer(
                 try
                     wait()
                 catch
-                    case _: InterruptedException => onInterrupted
+                    case _: InterruptedException => onInterruptedException
 
                 packetReceivingThread.getState == Thread.State.NEW
             do ()
         }
 
-        clientMap synchronized {
-            clientMap addOne (id, this)
+        _clients synchronized {
+            _clients addOne (id, this)
         }
 
         logger debug "Opened"
         
 
         protected[server] def closeWithoutNotifying: Unit =
-            open synchronized {
-                if closed then
-                    return
+            closeWithoutNotifying(false)
 
-                open = false
+        protected[server] def closeWithoutNotifying(doSendCloseCommand: Boolean = false): Unit =
+            _clients synchronized {
+                open synchronized {
+                    if closed then
+                        return
+
+                    open = false
+                }
+
+                logger debug "Closing..."
+
+                if doSendCloseCommand then
+                    try
+                        sendCloseCommand(0)
+                    catch
+                        case e: Exception => logger error e
+
+                closeSocket
+                stopPacketReceivingThread
+                removeFromClients
+
+                logger debug "Closed"
             }
-
-            logger debug "Closing..."
-
-            sendCloseCommand
-            closeSocket
-            stopPacketReceivingThread
-            removeFromClients
-
-            logger debug "Closed"
 
 
         private def inputStream: InputStream =
@@ -383,10 +402,7 @@ class TcpServer(
 
                     onPacket(packet)
                 catch
-                    case _:   InterruptedIOException => onInterrupted
-                    case _:   InterruptedException   => onInterrupted
-                    case ioe: IOException            => onIOException(ioe)
-                    case e:   Exception              => onException(e)
+                    case e: Exception => onAnyException(e)
 
         private def onPacket(packet: ClientPacket): Unit =
             packet match
@@ -401,14 +417,14 @@ class TcpServer(
                 case SendMessageClientCommand(code, text) => onSendMessageCommand(code, text)
 
         private def onPingCommand(code: Short): Unit =
-            logger debug "Received ping command"
+            logger debug s"Received ping command: $code"
 
             sendResponse(code, OK)
             
             logger debug "Pong"
 
         private def onCloseCommand(code: Short): Unit =
-            logger debug "Received disconnect command..."
+            logger debug s"Received close command: $code"
 
             sendResponse(code, OK)
             closeWithoutNotifying
@@ -418,23 +434,25 @@ class TcpServer(
             concurentEventListener onDisconnected this
 
         private def onSetNameCommand(code: Short, name: String): Unit =
-            logger debug s"Received name set command: \"${escape(name)}\"..."
+            logger debug s"Received set name command: $code - \"${escape(name)}\"..."
 
-            val status = if nameGood(name) then
-                val oldName = this.name
+            _clients synchronized {
+                val status = if nameGood(name) then
+                    val oldName = this.name
 
-                this.name = Some(name)
+                    this.name = Some(name)
 
-                logger debug "The name is accepted"
+                    logger debug "The name is accepted"
 
-                concurentEventListener.onSetName(this, oldName)
+                    concurentEventListener.onSetName(this, oldName)
 
-                OK
-            else
-                logger debug "The name is bad or occupied"
-                ERROR
+                    OK
+                else
+                    logger debug "The name is bad or occupied"
+                    ERROR
 
-            sendResponse(code, status)
+                sendResponse(code, status)
+            }
 
         private def nameGood(name: String): Boolean =
             if !(nameValidator nameGood name) then
@@ -442,7 +460,7 @@ class TcpServer(
             
             val lowerName = name.toLowerCase
 
-            clientMap synchronized {
+            _clients synchronized {
                 return !clients.exists(
                     _.name
                      .map(_.toLowerCase)
@@ -451,7 +469,7 @@ class TcpServer(
             }
 
         private def onSendMessageCommand(code: Short, text: String): Unit =
-            logger debug s"Received message: \"${escape(text)}\""
+            logger debug s"Received send message command: $code - \"${escape(text)}\""
 
             val status = if name == None then
                 logger debug "The message is discarded: name isn't set"
@@ -485,33 +503,28 @@ class TcpServer(
             sendPacket(Response(code, status))
             logger debug "Reponse sent"
 
-        private def sendCloseCommand: Unit =
-            sendCommand(CloseServerCommand(0))
+        private def sendPingCommand(code: Short): Unit =
+            logger debug s"Sending ping command: $code..."
+            sendCommand(PingServerCommand(code))
+            logger debug "Ping command is sent"
+
+        private def sendCloseCommand(code: Short): Unit =
+            logger debug s"Sending close command: $code..."
+            sendCommand(CloseServerCommand(code))
+            logger debug "Close command is sent"
+
+        private def sendSendMessageCommand(code: Short, message: Message): Unit =
+            logger debug s"Sending send message command: $code - $message..."
+            sendCommand(SendMessageServerCommand(code, message))
+            logger debug "Send message command is sent"
 
         private def sendCommand(command: ServerCommand): Unit =
-            logger debug s"Sending command with code ${command.code}..."
             sendPacket(command)
-            logger debug "Command is sent"
 
         private def sendPacket(command: ServerPacket): Unit =
             outputStream synchronized {
                 protocol.writePacket(command, outputStream)
             }
-
-        private def onInterrupted: Unit =
-            logger debug "Interrupted"
-            Thread.interrupted
-
-        private def onIOException(exception: IOException): Unit =
-            if open then
-                onException(exception)
-            else
-                logger debug "Socket is closed"
-
-        private def onException(exception: Exception): Unit =
-            logger error exception
-            closeWithoutNotifying
-            concurentEventListener onConnectionLost this
 
         private def closeSocket: Unit =
             logger debug "Closing socket..."
@@ -529,11 +542,41 @@ class TcpServer(
         private def removeFromClients: Unit =
             logger debug "Removing from client map..."
 
-            clientMap synchronized {
-                clientMap remove id
+            _clients synchronized {
+                _clients remove id
             }
 
             logger debug "Removed from client map"
+
+        private def onAnyException(exception: Exception): Unit =
+            exception match
+                case ie:   InterruptedException   => onInterruptedException(ie)
+                case iioe: InterruptedIOException => onInterruptedIOException(iioe)
+                case ce:   ClosedException        => onClosedException(ce)
+                case ioe:  IOException            => onIOException(ioe)
+                case e:    Exception              => onException(e)
+            
+        private def onInterruptedException(exception: InterruptedException): Unit =
+            logger debug "Aborted: interrupted"
+            Thread.interrupted
+
+        private def onInterruptedIOException(exception: InterruptedIOException): Unit =
+            logger debug "Aborted: I/O interrupted"
+            Thread.interrupted
+
+        private def onClosedException(exception: ClosedException): Unit =
+            logger debug s"Aborted: ${exception.getMessage}"
+
+        private def onIOException(exception: IOException): Unit =
+            if open then
+                onException(exception)
+            else
+                logger debug "Aborted: socket is closed"
+
+        private def onException(exception: Exception): Unit =
+            logger error exception
+            closeWithoutNotifying(true)
+            concurentEventListener onConnectionLost this
 
 
 private val logger = LogManager getLogger classOf[TcpServer]

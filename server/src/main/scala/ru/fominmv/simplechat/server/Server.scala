@@ -5,15 +5,15 @@ import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.protocol.Protocol
 import ru.fominmv.simplechat.core.util.Openable
 import ru.fominmv.simplechat.core.Message
-import ru.fominmv.simplechat.server.event.EventListener
+import ru.fominmv.simplechat.server.event.CascadeEventListener
 
 
 trait Server extends Openable:
     def name:          String
     def protocol:      Protocol
-    def eventListener: EventListener
     def clients:       Set[Client]
     def state:         State
+    def eventListener: CascadeEventListener
 
     override def closed: Boolean =
         state == State.CLOSING ||

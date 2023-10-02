@@ -9,7 +9,6 @@ import ru.fominmv.simplechat.core.{NameValidator, DefaultNameValidator}
 import ru.fominmv.simplechat.server.event.{
     CascadeEventListener,
     BroadcastEventListener,
-    EventListener,
     LogEventListener,
 }
 import ru.fominmv.simplechat.server.Config.*
@@ -27,8 +26,7 @@ class ServerBuilder(
     var protocol:           Protocol       = DEFAULT_PROTOCOL,
 ):
     def builderServer: Server =
-        val eventListener = CascadeEventListener()
-        val server        = TcpServer(
+        val server = TcpServer(
             port               = port,
             backlog            = backlog,
             maxPendingCommands = maxPendingCommands,
@@ -36,14 +34,15 @@ class ServerBuilder(
             nameValidator      = nameValidator,
             name               = name,
             protocol           = protocol,
-            eventListener      = eventListener,
         )
 
+        val eventListeners = server.eventListener.eventListeners
+
         if broadcastMessages then
-            eventListener.eventListeners addOne BroadcastEventListener(server)
+            eventListeners addOne BroadcastEventListener(server)
 
         if logMessages then
-            eventListener.eventListeners addOne LogEventListener
+            eventListeners addOne LogEventListener
 
         server
 

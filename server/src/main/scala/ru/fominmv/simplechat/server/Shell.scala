@@ -14,6 +14,7 @@ class Shell(val server: Server) extends ShellTrait:
     override def close: Unit =
         server.close
         open = false
+        console.interrupt
 
     override def commands: Set[Command] =
         COMMANDS
