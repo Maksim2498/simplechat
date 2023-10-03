@@ -37,13 +37,11 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
             case SetNameEvent(client, oldName) =>
                 server.broadcastMessage(
                     s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}",
-                    Set(client.id),
                 )
 
             case MessageEvent(client, text) =>
                 server.broadcastMessage(
                     Message(client.fullname, text),
-                    Set(client.id),
                 )
 
             case DisconnectedByServerEvent(client) =>

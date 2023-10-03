@@ -31,9 +31,6 @@ class Shell(val client: Client) extends ShellTrait {
 
         client sendMessageToServer input
 
-        if client.name != None then
-            console print s"${client.name.get}: $input"
-
     override protected def readInput(buffer: String = ""): String =
         var currentBuffer = buffer
 
