@@ -139,5 +139,12 @@ class BufferingEventListener(
     private def onException(exception: Exception): Unit =
         logger error exception
 
+object BufferingEventListener:
+    def apply(eventListeners: EventListener*): BufferingEventListener =
+        val eventListener = new BufferingEventListener()
+
+        eventListener.eventListeners addAll eventListeners
+
+        eventListener
     
 private val logger = LogManager getLogger classOf[BufferingEventListener]
