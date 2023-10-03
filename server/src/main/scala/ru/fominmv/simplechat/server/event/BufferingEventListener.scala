@@ -27,8 +27,12 @@ class BufferingEventListener(
 
         _lifecyclePhase = CLOSING
 
+        logger debug "Closing..."
+
         stopPublishingThread
         buffer.clear
+
+        logger debug "Closed"
 
         _lifecyclePhase = CLOSED
 
@@ -38,8 +42,12 @@ class BufferingEventListener(
 
         _lifecyclePhase = OPENING
 
+        logger debug "Opening..."
+
         startPublishingThread
         waitPublishingThreadStarted
+
+        logger debug "Open"
 
         _lifecyclePhase = OPEN
 
@@ -139,12 +147,5 @@ class BufferingEventListener(
     private def onException(exception: Exception): Unit =
         logger error exception
 
-object BufferingEventListener:
-    def apply(eventListeners: EventListener*): BufferingEventListener =
-        val eventListener = new BufferingEventListener()
 
-        eventListener.eventListeners addAll eventListeners
-
-        eventListener
-    
 private val logger = LogManager getLogger classOf[BufferingEventListener]
