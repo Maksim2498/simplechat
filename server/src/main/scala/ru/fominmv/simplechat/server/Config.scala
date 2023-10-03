@@ -17,6 +17,7 @@ case class Config(
     maxPendingCommands: Int            = Config.DEFAULT_MAX_PENDING_COMMANDS,
     logMessages:        Boolean        = Config.DEFAULT_LOG_MESSAGES,
     broadcastMessages:  Boolean        = Config.DEFAULT_BROADCAST_MESSAGES,
+    bufferingDuration:  FiniteDuration = Config.DEFAULT_BUFFERING_DURATION,
     name:               String         = Config.DEFAULT_NAME,
     protocol:           Protocol       = Config.DEFAULT_PROTOCOL,
     pingInterval:       FiniteDuration = Config.DEFAULT_PING_INTERVAL,
@@ -30,6 +31,7 @@ object Config:
     val DEFAULT_MAX_PENDING_COMMANDS: Int            = 50
     val DEFAULT_LOG_MESSAGES:         Boolean        = true
     val DEFAULT_BROADCAST_MESSAGES:   Boolean        = true
+    val DEFAULT_BUFFERING_DURATION:   FiniteDuration = 0.seconds
     val DEFAULT_NAME:                 String         = "<Server>"
     val DEFAULT_PROTOCOL:             Protocol       = TextProtocol()
     val DEFAULT_PING_INTERVAL:        FiniteDuration = 10.seconds

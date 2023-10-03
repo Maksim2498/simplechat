@@ -44,6 +44,7 @@ It will look like this: `--port 1502` or `--port=1502`.
 | `--help`, `-h`           | -                   | -             | Prints help message and quits                                                                                                          |
 | `--version`, `-v`        | -                   | -             | Prints version and quits                                                                                                               |
 | `--debug`, `-d`          | -                   | -             | Enables debug mode                                                                                                                     |
+| `--buffering-duration`   | `duration`          | `0s`          | Specifies how long messages should be buffered before broadcasting them (if 0s then message buffering is disabled)                     |
 | `--broadcast-messages`   | `boolean`           | `true`        | Enables or disables broadcasting of received messages to all clients                                                                   |
 | `--print-messages`       | `boolean`           | `true`        | Enables or disables printing of received messages                                                                                      |
 | `--port`, `-p`           | `int`               | `24982`       | Specifies server port                                                                                                                  |

@@ -66,6 +66,16 @@ object Main:
                 .text("Enables debug mode")
                 .action((v, c) => c.copy(debug = true)),
 
+            opt[FiniteDuration]("buffering-duration")
+                .text("Specifies how long messages should be buffered before broadcasting them (if 0s then message buffering is disabled)")
+                .action((v, c) => c.copy(bufferingDuration = v ))
+                .validate(v =>
+                    if v >= 0.seconds then
+                        success
+                    else
+                        failure("Option --buffering-duration must be non-negative")
+                ),
+
             opt[Boolean]("broadcast-messages")
                 .text("Enables or disables broadcasting of received messages to all clients")
                 .action((v, c) => c.copy(broadcastMessages = v)),
@@ -131,6 +141,7 @@ object Main:
             backlog            = config.backlog,
             maxPendingCommands = config.maxPendingCommands,
             name               = config.name,
+            bufferingDuration  = config.bufferingDuration,
             pingInterval       = config.pingInterval,
             protocol           = config.protocol,
         )
