@@ -14,9 +14,9 @@ import ru.fominmv.simplechat.server.Client
 
 
 class BufferingEventListener(
-    val bufferDuration: FiniteDuration = 10.seconds,
-    val autoOpen:       Boolean        = true,
-    val autoClose:      Boolean        = true,
+    val bufferingDuration: FiniteDuration = 10.seconds,
+    val autoOpen:          Boolean        = true,
+    val autoClose:         Boolean        = true,
 ) extends EventListener, LifecycleDriven:
     // External uses should be synchronized when open
     val eventListeners = ArrayBuffer[EventListener]()
@@ -74,7 +74,7 @@ class BufferingEventListener(
     )
 
 
-    if bufferDuration <= 0.seconds then
+    if bufferingDuration <= 0.seconds then
         throw IllegalArgumentException("bufferDuration must be positive")
 
 
@@ -104,7 +104,7 @@ class BufferingEventListener(
         while !closed do
             try
                 logger debug "Waiting..."
-                Thread sleep bufferDuration.toMillis
+                Thread sleep bufferingDuration.toMillis
                 publish
             catch
                 case e: Exception => onAnyException(e)
