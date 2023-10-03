@@ -87,12 +87,12 @@ class TcpClient private (
 
     override def close: Unit =
         if closeGenerally(true) then
-            concurentEventListener.onDisconnected
+            concurentEventListener.publishDisconnected
 
     override def open: Unit =
         _lifecyclePhase synchronized {
             ClosedException.checkOpen(this, "Client is closed")
-            concurentEventListener.onPreOpen
+            concurentEventListener.publishPreOpen
             _lifecyclePhase = OPENING
         }
 
@@ -103,7 +103,7 @@ class TcpClient private (
 
         _lifecyclePhase = OPEN
 
-        concurentEventListener.onPostOpen
+        concurentEventListener.publishPostOpen
 
         if _name != None then
             name = _name.get
@@ -144,6 +144,7 @@ class TcpClient private (
 
     if maxPendingCommands < 0 then
         throw IllegalArgumentException("maxPendingCommands must be non-negative")
+
 
     private def makeNextSendMessageCommandCode(text: String): Short =
         checkPendingCommandCount
@@ -187,9 +188,7 @@ class TcpClient private (
 
     private def connect: Unit =
         logger debug "Connecting..."
-
         socket connect InetSocketAddress(address, port)
-
         logger debug "Connected"
 
     private def startPingingThreadIfNeeded: Unit =
@@ -264,39 +263,50 @@ class TcpClient private (
         logger debug s"Got response: $code - $status"
 
         if status == FATAL then
-            logger debug "Server responded with fatal error"
-            closeGenerally
-            concurentEventListener.onFatalError
+            onFatalResponse
             return
 
-        val newName = nameSetPendingCommandCodes remove code
+        val newNameOption = nameSetPendingCommandCodes remove code
 
-        if newName != None then
-            if status == OK then
-                logger debug "Name set accepted"
-
-                val oldName = _name
-
-                _name = newName
-
-                concurentEventListener.onSetName(newName.get, oldName)
-            else
-                logger debug "Name set rejected"
-                concurentEventListener onNameRejected newName.get
-
+        if newNameOption != None then
+            onNameResponse(status, code, newNameOption.get)
             return
 
-        val text = sendMessagePendingCommandCodes remove code
+        val textOption = sendMessagePendingCommandCodes remove code
 
-        if text != None then
-            if status == OK then
-                logger debug "Message rejected"
-            else
-                logger debug "Message accepted"
-                concurentEventListener onMessageRejected text.get
-
+        if textOption != None then
+            onMessageResponse(status, code, textOption.get)
             return
 
+        onGeneralResponse(status, code)
+
+    private def onFatalResponse: Unit =
+        logger debug "Server responded with fatal error"
+        closeGenerally
+        concurentEventListener.publishFatalServerError
+
+    private def onNameResponse(status: Status, code: Short, newName: String): Unit =
+        val oldName = _name
+
+        if status == OK then
+            logger debug "Name set accepted"
+            _name = Some(newName)
+            concurentEventListener.publishNameAccepted(newName, oldName)
+        else
+            logger debug "Name set rejected"
+            concurentEventListener publishNameRejected(newName, oldName)
+
+    private def onMessageResponse(status: Status, code: Short, text: String): Unit =
+        val message = makeMessage(text)
+
+        if status == OK then
+            logger debug "Message rejected"
+            concurentEventListener publishMessageAccepted message
+        else
+            logger debug "Message accepted"
+            concurentEventListener publishMessageRejected message
+
+    private def onGeneralResponse(status: Status, code: Short): Unit =
         if pendingCommandCodes == null || (pendingCommandCodes remove code) then
             logger debug "Response accepted"
             return
@@ -313,25 +323,21 @@ class TcpClient private (
 
     private def onPingCommand(code: Short): Unit =
         logger debug s"Received ping command: $code"
-
         sendResponse(code, OK)
-        
         logger debug "Pong"
+        concurentEventListener.publishPinged
 
     private def onCloseCommand(code: Short): Unit =
         logger debug s"Received disconnect command: $code"
-
         sendResponse(code, OK)
         closeGenerally
-
         logger debug "Disconnected"
-
-        concurentEventListener.onDisconnectedByServer
+        concurentEventListener.publishDisconnectedByServer
 
     private def onSendMessageCommand(code: Short, message: Message): Unit =
         logger debug s"Received send message command: $code - $message"
         sendResponse(code, OK)
-        concurentEventListener onMessage message
+        concurentEventListener publishMessageReceived message
 
     private def sendResponse(code: Short, status: Status): Unit =
         logger debug s"Sending response: $code - $status"
@@ -339,9 +345,11 @@ class TcpClient private (
         logger debug "Response sent"
 
     private def sendPingCommand(code: Short): Unit =
+        concurentEventListener.publishPrePinging
         logger debug s"Sending ping command: $code..."
         sendCommand(PingClientCommand(code))
         logger debug "Ping command is sent"
+        concurentEventListener.publishPostPinging
 
     private def sendCloseCommand(code: Short): Unit =
         logger debug s"Sending close command: $code..."
@@ -349,15 +357,21 @@ class TcpClient private (
         logger debug "Close command is sent"
 
     private def sendSendMessageCommand(code: Short, text: String): Unit =
+        val message = makeMessage(text)
+
+        concurentEventListener publishPreTrySendMessage message
         logger debug s"Sending send message command: $code - \"${text.escape}\"..."
         sendCommand(SendMessageClientCommand(code, text))
         logger debug "Send message command is sent"
+        concurentEventListener publishPostTrySendMessage message
 
     private def sendSetNameCommand(code: Short, name: String): Unit =
+        concurentEventListener.publishPreTrySetName(name, _name)
         logger debug s"Sending set name command: $code - \"${name.escape}\"..."
         sendCommand(SetNameClientCommand(code, name))
         nameSetPendingCommandCodes addOne (code, name)
         logger debug "Set name command is sent"
+        concurentEventListener.publishPostTrySetName(name, _name)
 
     private def sendCommand(command: ClientCommand): Unit =
         sendPacket(command)
@@ -395,7 +409,7 @@ class TcpClient private (
     private def onException(exception: Exception): Unit =
         logger error exception
         closeGenerally(true)
-        concurentEventListener.onConnectionLost
+        concurentEventListener.publishConnectionLost
 
     private def closeGenerally: Boolean =
         closeGenerally()
@@ -405,7 +419,7 @@ class TcpClient private (
             if closed then
                 return false
 
-            concurentEventListener.onPreClose
+            concurentEventListener.publishPreClose
 
             _lifecyclePhase = CLOSING
         }
@@ -431,7 +445,7 @@ class TcpClient private (
 
         _lifecyclePhase = CLOSED
 
-        concurentEventListener.onPostClose
+        concurentEventListener.publishPostClose
 
         true
 

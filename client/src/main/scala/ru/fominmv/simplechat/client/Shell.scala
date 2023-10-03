@@ -6,10 +6,15 @@ import ru.fominmv.simplechat.core.cli.{
     Command,
     Shell => ShellTrait,
 }
-import ru.fominmv.simplechat.client.event.EventListener
+import ru.fominmv.simplechat.client.event.{
+    Event,
+    PostCloseEvent,
+    EventListener,
+    NameAcceptedEvent,
+}
 
 
-class Shell(val client: Client) extends ShellTrait {
+class Shell(val client: Client) extends ShellTrait:
     override def closed: Boolean =
         !open
 
@@ -68,10 +73,13 @@ class Shell(val client: Client) extends ShellTrait {
     console.showInput = false
 
     client.eventListener.eventListeners addOne new EventListener:
-        override def onPostClose: Unit =
-            close
+        override def on(event: Event): Unit =
+            event match
+                case PostCloseEvent() =>
+                    close
 
-        override def onSetName(newName: String, oldName: Option[String]): Unit =
-            updatingName = true
-            console.interrupt
-}
+                case NameAcceptedEvent(_, _) =>
+                    updatingName = true
+                    console.interrupt
+
+                case _ =>

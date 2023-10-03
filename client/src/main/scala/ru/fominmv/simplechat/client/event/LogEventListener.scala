@@ -3,48 +3,66 @@ package ru.fominmv.simplechat.client.event
 
 import org.apache.logging.log4j.LogManager
 
+import ru.fominmv.simplechat.core.util.StringExtension.escape
 import ru.fominmv.simplechat.core.Message
 
 
 object LogEventListener extends EventListener:
-    override def onPreOpen: Unit =
-        logger info "Connecting to server..."
+    override def on(event: Event): Unit =
+        event match
+            case PreOpenEvent() => 
+                logger info "Connecting to server..."
 
-    override def onPostOpen: Unit =
-        logger info "Connected"
+            case PostOpenEvent() =>
+                logger info "Connected"
 
-    override def onPreClose: Unit =
-        logger info "Closing connection..."
+            case PreCloseEvent() =>
+                logger info "Closing connection..."
 
-    override def onPostClose: Unit =
-        logger info "Connection closed"
+            case PostCloseEvent() =>
+                logger info "Connection closed"
 
-    override def onMessage(message: Message): Unit =
-        logger info s"${message.author}: ${message.text}"
+            case PingedEvent() =>
 
-    override def onSetName(newName: String, oldName: Option[String]): Unit =
-        if oldName == None then
-            logger info s"Name set to \"$newName\""
-        else
-            logger info s"Name changed from \"${oldName.get}\" to \"$newName\""
+            case MessageReceivedEvent(message) =>
+                logger info s"${message.author}: ${message.text}"
 
-    override def onNameRejected(name: String): Unit =
-        logger error s"Server rejected a name set to \"$name\""
+            case MessageRejectedEvent(message) =>
+                logger error s"Server rejected a message: $message"
 
-    override def onMessageRejected(text: String): Unit =
-        logger error s"Server rejected a message \"$text\""
+            case MessageAcceptedEvent(message) =>
 
-    override def onDisconnectedByServer: Unit =
-        logger info "Disconnected by server"
+            case NameRejectedEvent(newName, oldName) =>
+                if oldName == None then
+                    logger error s"Server rejected a name set to \"${newName.escape}\""
+                else
+                    logger error s"Server rejected a name change from \"${oldName.get.escape}\" to \"${newName.escape}\""
 
-    override def onDisconnected: Unit =
-        logger info "Disconnected"
+            case NameAcceptedEvent(newName, oldName) =>
 
-    override def onConnectionLost: Unit =
-        logger info s"Connection lost"
+            case DisconnectedByServerEvent() =>
+                logger info "Disconnected by server"
 
-    override def onFatalError: Unit =
-        logger error s"Server responded with fatal error"
+            case FatalServerErrorEvent() =>
+                logger error s"Server responded with fatal error"
 
+            case DisconnectedEvent() =>
+                logger info "Disconnected"
+
+            case ConnectionLostEvent() =>
+                logger info s"Connection lost"
+
+            case PreTrySendMessageEvent(message) =>
+
+            case PostTrySendMessageEvent(message) =>
+
+            case PreTrySetNameEvent(name, oldName) =>
+
+            case PostTrySetNameEvent(name, oldName) =>
+
+            case PrePingingEvent() =>
+
+            case PostPingingEvent() =>
+        
 
     private val logger = LogManager getLogger LogEventListener
