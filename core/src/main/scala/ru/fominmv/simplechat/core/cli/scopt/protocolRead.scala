@@ -3,9 +3,9 @@ package ru.fominmv.simplechat.core.cli.scopt
 
 import scopt.Read
 
-import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.binary.BinaryProtocol
+import ru.fominmv.simplechat.core.protocol.text.TextProtocol
+import ru.fominmv.simplechat.core.protocol.Protocol
 
 
 implicit val protocolRead: Read[Protocol] =
