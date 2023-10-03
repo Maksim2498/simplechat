@@ -105,6 +105,9 @@ class TcpClient private (
 
         concurentEventListener.onPostOpen
 
+        if _name != None then
+            name = _name.get
+
 
     @volatile
     private var _name                          = initName
