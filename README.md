@@ -1,4 +1,4 @@
-# Simple Scala Chat (***WIP***)
+# Simple Scala Chat
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ Project is created in self-education purposes and has no real-world use potentia
 It consists of:
 
 - [`Core`](./core/README.md) - utility library;
-- [`Client`](./client/README.md) (***WIP***);
+- [`Client`](./client/README.md);
 - [`Server`](./server/README.md).
 
 For more info on each of it's parts see links above.
