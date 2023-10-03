@@ -27,22 +27,15 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
             case PostBroadcastMessageEvent(message, except) =>
 
             case ConnectedEvent(client) =>
-                server.broadcastMessage(
-                    s"${client.fullname} connected from ${client.address}",
-                    Set(client.id),
-                )
+                server broadcastMessage s"${client.fullname} connected from ${client.address}"
 
             case PingEvent(client) =>
 
             case SetNameEvent(client, oldName) =>
-                server.broadcastMessage(
-                    s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}",
-                )
+                server broadcastMessage s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}"
 
             case MessageEvent(client, text) =>
-                server.broadcastMessage(
-                    Message(client.fullname, text),
-                )
+                server broadcastMessage Message(client.fullname, text)
 
             case DisconnectedByServerEvent(client) =>
                 server.broadcastMessage(

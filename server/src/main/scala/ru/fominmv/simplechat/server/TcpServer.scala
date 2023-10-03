@@ -227,7 +227,7 @@ class TcpServer(
 
                 val client = new Client(clientId, clientSocket)
 
-                concurentEventListener publishConnected client
+                concurentEventListener publishConnected client.makeSnapshot
             catch
                 case e: Exception => onAnyException(e)
 
@@ -313,7 +313,7 @@ class TcpServer(
 
         override def close: Unit =
             closeWithoutNotifying(true)
-            concurentEventListener publishDisconnectedByServer this
+            concurentEventListener publishDisconnectedByServer makeSnapshot
 
         override def address: InetAddress =
             socket.getInetAddress
@@ -457,7 +457,7 @@ class TcpServer(
             
             logger debug "Pong"
 
-            concurentEventListener publishPing this
+            concurentEventListener publishPing makeSnapshot
 
         private def onCloseCommand(code: Short): Unit =
             logger debug s"Received close command: $code"
@@ -467,7 +467,7 @@ class TcpServer(
 
             logger debug "Disconnected"
 
-            concurentEventListener publishDisconnected this
+            concurentEventListener publishDisconnected makeSnapshot
 
         private def onSetNameCommand(code: Short, name: String): Unit =
             logger debug s"Received set name command: $code - \"${escape(name)}\"..."
@@ -480,7 +480,7 @@ class TcpServer(
 
                     logger debug "The name is accepted"
 
-                    concurentEventListener.publishSetName(this, oldName)
+                    concurentEventListener.publishSetName(makeSnapshot, oldName)
 
                     OK
                 else
@@ -512,7 +512,7 @@ class TcpServer(
                 ERROR
             else
                 logger debug "The message is accepted"
-                concurentEventListener.publishMessage(this, text)
+                concurentEventListener.publishMessage(makeSnapshot, text)
                 OK
 
             sendResponse(code, status)
@@ -523,7 +523,7 @@ class TcpServer(
             if status == FATAL then
                 logger debug "Client responded fith fatal error"
                 closeWithoutNotifying
-                concurentEventListener publishFatalError this
+                concurentEventListener publishFatalError makeSnapshot
                 return
 
             if pendingCommandCodes == null || (pendingCommandCodes remove code) then
@@ -612,7 +612,7 @@ class TcpServer(
         private def onException(exception: Exception): Unit =
             logger error exception
             closeWithoutNotifying(true)
-            concurentEventListener publishConnectionLost this
+            concurentEventListener publishConnectionLost makeSnapshot
 
 
 private val logger = LogManager getLogger classOf[TcpServer]

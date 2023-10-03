@@ -23,6 +23,22 @@ trait Client extends Closeable:
     def shortname: String = Client.shortname(id, name)
     def fullname:  String = Client.fullname(id, name)
 
+    def makeSnapshot: Client =
+        val _this       = this
+        val currentName = name
+
+        new Client:
+            val id      = _this.id
+            val address = _this.address
+            val name    = currentName
+            val server  = _this.server
+
+            def ping = _this.ping
+            def sendMessage(message: Message) = _this sendMessage message
+
+            def close = _this.close
+            def closed = _this.closed
+
 object Client:
     def fullname(id: Int, name: Option[String]): String =
         s"${name getOrElse ""}#$id"
