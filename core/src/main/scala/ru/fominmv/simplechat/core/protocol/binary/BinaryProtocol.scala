@@ -14,7 +14,7 @@ import ru.fominmv.simplechat.core.protocol.{
 
 
 class BinaryProtocol(
-    val charset: Charset = StandardCharsets.UTF_8
+    val charset: Charset = StandardCharsets.UTF_8,
 ) extends Protocol:
     override def readClientPacket(stream: InputStream): ClientPacket =
         readBinaryPacket(stream).toClientPacket
@@ -27,7 +27,7 @@ class BinaryProtocol(
 
 
     private def readBinaryPacket(stream: InputStream): BinaryPacket =
-        BinaryPacket read stream
+        BinaryPacket.read(stream, charset)
 
     private def writeBinaryPacket(packet: BinaryPacket, stream: OutputStream): Unit =
         packet.write(stream, charset)

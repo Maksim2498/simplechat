@@ -44,7 +44,6 @@ import ru.fominmv.simplechat.core.util.ToBytesConvertible
 import ru.fominmv.simplechat.core.util.UnsignedUtil.*
 import ru.fominmv.simplechat.core.Message
 
-
 sealed trait BinaryPacket extends ToPacketConvertible, ToBytesConvertible:
     def typeId: Byte
     def code:   Short
@@ -123,13 +122,20 @@ case class BinaryCommand(
     commandId: Byte,
     args:      List[String] = List()
 ) extends BinaryPacket:
-    if args.length > UBYTE_MAX || args.exists(_.length > USHORT_MAX) then
+    if args.length > UBYTE_MAX then
         throw BadCommandException()
 
-    override def typeId: Byte = BinaryCommand.TYPE_ID
+    override def typeId: Byte =
+        BinaryCommand.TYPE_ID
 
     override def toClientPacket: ClientCommand =
         commandId match
+            case BinaryCommand.PING_CLIENT_COMMAND_ID =>
+                if !args.isEmpty then
+                    throw BadClientCommandException()
+
+                PingClientCommand(code)
+
             case BinaryCommand.CLOSE_CLIENT_COMMAND_ID =>
                 if !args.isEmpty then
                     throw BadClientCommandException()
@@ -187,8 +193,13 @@ case class BinaryCommand(
         dataStream writeByte  args.length.toByte
 
         for arg <- args do
-            dataStream writeShort arg.length.toShort
-            dataStream write      arg.getBytes(charset)
+            val bytes = arg getBytes charset
+
+            if bytes.length > USHORT_MAX then
+                throw BadCommandException()
+
+            dataStream writeShort bytes.length.toShort
+            dataStream write      bytes
 
     override def toString: String =
         s"$typeId $code $commandId ${args map (a => s"\"${a.escape}\"") mkString " "}"
@@ -270,7 +281,7 @@ object BinaryCommand:
         val commandId = dataStream.readByte
         val argCount  = byteToUnsigned(dataStream.readByte)
 
-        var args = for i <- 0 to argCount yield
+        var args = for _ <- 1 to argCount yield
             val length = shortToUnsigned(dataStream.readShort)
             val bytes  = new Array[Byte](length)
 
