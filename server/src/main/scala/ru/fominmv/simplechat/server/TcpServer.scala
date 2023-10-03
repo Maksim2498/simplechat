@@ -76,7 +76,7 @@ class TcpServer(
                 client.ping
         }
 
-        concurentEventListener publishPostPingClients except
+        concurentEventListener publishPostPing except
 
     override def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
         ClosedException.checkOpen(this, "Server is closed")
@@ -457,7 +457,7 @@ class TcpServer(
             
             logger debug "Pong"
 
-            concurentEventListener publishPing makeSnapshot
+            concurentEventListener publishPinged makeSnapshot
 
         private def onCloseCommand(code: Short): Unit =
             logger debug s"Received close command: $code"
@@ -512,7 +512,7 @@ class TcpServer(
                 ERROR
             else
                 logger debug "The message is accepted"
-                concurentEventListener.publishMessage(makeSnapshot, text)
+                concurentEventListener.publishMessageReceived(makeSnapshot, text)
                 OK
 
             sendResponse(code, status)

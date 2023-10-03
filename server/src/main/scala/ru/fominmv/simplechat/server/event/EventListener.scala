@@ -28,13 +28,13 @@ trait EventListener:
         publishPrePingClients()
 
     def publishPrePingClients(except: Set[Int] = Set[Int]()): Unit =
-        on(PrePingClientsEvent(except))
+        on(PrePingEvent(except))
 
-    def publishPostPingClients: Unit =
-        publishPostPingClients()
+    def publishPostPing: Unit =
+        publishPostPing()
 
-    def publishPostPingClients(except: Set[Int] = Set[Int]()): Unit =
-        on(PostPingClientsEvent(except))
+    def publishPostPing(except: Set[Int] = Set[Int]()): Unit =
+        on(PostPingEvent(except))
 
     def publishPreBroadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
         on(PreBroadcastMessageEvent(message, except))
@@ -47,14 +47,14 @@ trait EventListener:
     def publishConnected(client: Client): Unit =
         on(ConnectedEvent(client))
 
-    def publishPing(client: Client): Unit =
-        on(PingEvent(client))
+    def publishPinged(client: Client): Unit =
+        on(PingedEvent(client))
 
     def publishSetName(client: Client, oldName: Option[String]): Unit =
         on(SetNameEvent(client, oldName))
 
-    def publishMessage(client: Client, text: String): Unit =
-        on(MessageEvent(client, text))
+    def publishMessageReceived(client: Client, text: String): Unit =
+        on(MessageReceivedEvent(client, text))
 
     def publishDisconnectedByServer(client: Client): Unit =
         on(DisconnectedByServerEvent(client))

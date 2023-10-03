@@ -21,9 +21,9 @@ object LogEventListener extends EventListener:
             case PostCloseEvent() =>
                 logger info "Closed"
 
-            case PrePingClientsEvent(except) =>
+            case PrePingEvent(except) =>
 
-            case PostPingClientsEvent(except) =>
+            case PostPingEvent(except) =>
 
             case PreBroadcastMessageEvent(message, except) =>
 
@@ -33,13 +33,13 @@ object LogEventListener extends EventListener:
             case ConnectedEvent(client) =>
                 logger info s"${client.fullname} connected from ${client.address}"
 
-            case PingEvent(client) =>
+            case PingedEvent(client) =>
 
             case SetNameEvent(client, oldName) =>
                 logger info s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}"
 
-            case MessageEvent(client, text) =>
-                logger info s"${client.fullname}: $text"
+            case MessageReceivedEvent(client, text) =>
+                logger info s"Received message from ${client.fullname}: $text"
 
             case DisconnectedByServerEvent(client) =>
                 logger info s"${client.fullname} was disconnected by server"

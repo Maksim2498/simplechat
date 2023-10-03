@@ -18,8 +18,8 @@ case class PostCloseEvent() extends LifeCycleEvent
 
 sealed trait ServerEvent extends Event
 
-case class PrePingClientsEvent(except: Set[Int] = Set[Int]())  extends ServerEvent
-case class PostPingClientsEvent(except: Set[Int] = Set[Int]()) extends ServerEvent
+case class PrePingEvent(except: Set[Int] = Set[Int]())  extends ServerEvent
+case class PostPingEvent(except: Set[Int] = Set[Int]()) extends ServerEvent
 
 case class PreBroadcastMessageEvent(
     message: Message,
@@ -35,9 +35,9 @@ case class PostBroadcastMessageEvent(
 sealed trait ClientEvent extends Event
 
 case class ConnectedEvent(client: Client)                        extends ClientEvent
-case class PingEvent(client: Client)                             extends ClientEvent
+case class PingedEvent(client: Client)                           extends ClientEvent
 case class SetNameEvent(client: Client, oldName: Option[String]) extends ClientEvent
-case class MessageEvent(client: Client, text: String)            extends ClientEvent
+case class MessageReceivedEvent(client: Client, text: String)    extends ClientEvent
 case class DisconnectedByServerEvent(client: Client)             extends ClientEvent
 case class DisconnectedEvent(client: Client)                     extends ClientEvent
 case class ConnectionLostEvent(client: Client)                   extends ClientEvent

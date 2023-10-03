@@ -18,9 +18,9 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
 
             case PostCloseEvent() =>
 
-            case PrePingClientsEvent(except) =>
+            case PrePingEvent(except) =>
 
-            case PostPingClientsEvent(except) =>
+            case PostPingEvent(except) =>
 
             case PreBroadcastMessageEvent(message, except) =>
 
@@ -29,12 +29,12 @@ case class BroadcastEventListener(val server: Server) extends EventListener:
             case ConnectedEvent(client) =>
                 server broadcastMessage s"${client.fullname} connected from ${client.address}"
 
-            case PingEvent(client) =>
+            case PingedEvent(client) =>
 
             case SetNameEvent(client, oldName) =>
                 server broadcastMessage s"${Client.fullname(client.id, oldName)} set his/her name to ${client.name.get}"
 
-            case MessageEvent(client, text) =>
+            case MessageReceivedEvent(client, text) =>
                 server broadcastMessage Message(client.fullname, text)
 
             case DisconnectedByServerEvent(client) =>

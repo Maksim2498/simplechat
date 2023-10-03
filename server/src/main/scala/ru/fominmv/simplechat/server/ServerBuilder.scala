@@ -40,6 +40,9 @@ class ServerBuilder(
 
         val eventListeners = server.eventListener.eventListeners
 
+        if logMessages then
+            eventListeners addOne LogEventListener
+
         if broadcastMessages then
             val broadcastEventListener = BroadcastEventListener(server)
 
@@ -53,9 +56,6 @@ class ServerBuilder(
                 broadcastEventListener
 
             eventListeners addOne eventListener
-
-        if logMessages then
-            eventListeners addOne LogEventListener
 
         server
 
