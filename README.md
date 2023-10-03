@@ -65,7 +65,7 @@ java -jar /path/to/achive.jar
 
 - [Protocol](./docs/protocol.md) (***WIP***).
 - [Client CLI](./client/docs/cli.md);
-- [Client shell](./client/docs/shell.md) (***WIP***);
+- [Client shell](./client/docs/shell.md)
 - [Server CLI](./server/docs/cli.md);
 - [Server shell](./server/docs/shell.md);
 - [Code of Conduct](./docs/CODE_OF_CONDUCT.md);
