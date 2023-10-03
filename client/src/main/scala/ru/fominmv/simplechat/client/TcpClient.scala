@@ -460,7 +460,8 @@ class TcpClient private (
         logger debug "Socket is closed"
 
     private def stopPingingThreadIfNeeded: Unit =
-        ThreadUtil.stop(pingingThread, Some(logger))
+        if pingingThread != null then
+            ThreadUtil.stop(pingingThread, Some(logger))
 
     private def stopPacketReceivingThread: Unit =
         ThreadUtil.stop(packageReceivingThread, Some(logger))
