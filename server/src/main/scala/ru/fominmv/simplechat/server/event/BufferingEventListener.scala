@@ -30,6 +30,8 @@ class BufferingEventListener(
         logger debug "Closing..."
 
         stopPublishingThread
+
+        eventListeners.clear
         buffer.clear
 
         logger debug "Closed"
@@ -62,9 +64,13 @@ class BufferingEventListener(
                 case PreOpenEvent() => open
                 case _ =>
 
+        logger debug "Buffering event..."
+
         buffer synchronized {
             buffer addOne event
         }
+
+        logger debug "Buffered"
 
         if autoClose then
             event match
@@ -121,13 +127,16 @@ class BufferingEventListener(
         logger debug "Publishing events..."
 
         eventListeners synchronized {
-            buffer synchronized {
-                buffer foreach (event =>
-                    eventListeners foreach (_ on event)
-                )
+            var newBuffer: ArrayBuffer[Event] = null
 
+            buffer synchronized {
+                newBuffer = buffer.clone
                 buffer.clear
             }
+
+            newBuffer foreach (event =>
+                eventListeners foreach (_ on event)
+            )
         }
 
         logger debug "Published"
