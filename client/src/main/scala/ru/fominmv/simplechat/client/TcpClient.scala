@@ -37,12 +37,13 @@ import ru.fominmv.simplechat.core.protocol.{
     SendMessageServerCommand,
 }
 import ru.fominmv.simplechat.core.protocol.ServerPacket
+import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
+import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.escape
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.util.UnsignedUtil.*
 import ru.fominmv.simplechat.core.Message
 import ru.fominmv.simplechat.client.event.{ConcurentEventListener, CascadeEventListener}
-import ru.fominmv.simplechat.client.State.*
 
 
 class TcpClient private (
@@ -54,8 +55,8 @@ class TcpClient private (
     override val protocol:           Protocol,
     override val eventListener:      CascadeEventListener,
 ) extends Client:
-    override def state: State =
-        _state
+    override def lifecyclePhase: LifecyclePhase =
+        _lifecyclePhase
 
     override def name: Option[String] =
         _name
@@ -67,10 +68,6 @@ class TcpClient private (
             sendSetNameCommand(makeNextSetNameCommandCode(name), name)
         catch
             case e: Exception => onException(e)
-
-    override def closed: Boolean =
-        state == State.CLOSING ||
-        state == State.CLOSED
 
     override def sendMessageToServer(text: String): Unit =
         ClosedException.checkOpen(this, "Client is closed")
@@ -93,10 +90,10 @@ class TcpClient private (
             concurentEventListener.onDisconnected
 
     override def open: Unit =
-        _state synchronized {
+        _lifecyclePhase synchronized {
             ClosedException.checkOpen(this, "Client is closed")
             concurentEventListener.onPreOpen
-            _state = OPENING
+            _lifecyclePhase = OPENING
         }
 
         connect
@@ -104,7 +101,7 @@ class TcpClient private (
         startPacketReceivingThread
         waitThreadsStarted
 
-        _state = OPEN
+        _lifecyclePhase = OPEN
 
         concurentEventListener.onPostOpen
 
@@ -113,7 +110,7 @@ class TcpClient private (
     private var _name                          = initName
 
     @volatile
-    private var _state                         = NEW
+    private var _lifecyclePhase                = NEW
 
     private val concurentEventListener         = ConcurentEventListener(eventListener)
     private val socket                         = Socket()
@@ -401,13 +398,13 @@ class TcpClient private (
         closeGenerally()
 
     private def closeGenerally(doSendCloseCommand: Boolean = false): Boolean =
-        _state synchronized {
+        _lifecyclePhase synchronized {
             if closed then
                 return false
 
             concurentEventListener.onPreClose
 
-            _state = CLOSING
+            _lifecyclePhase = CLOSING
         }
 
         logger debug "Closing..."
@@ -429,7 +426,7 @@ class TcpClient private (
 
         logger debug "Closed"
 
-        _state = CLOSED
+        _lifecyclePhase = CLOSED
 
         concurentEventListener.onPostClose
 

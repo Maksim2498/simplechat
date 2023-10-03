@@ -3,13 +3,12 @@ package ru.fominmv.simplechat.client
 
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.core.util.lifecycle.Openable
+import ru.fominmv.simplechat.core.util.lifecycle.{LifecycleDriven, LifecyclePhase}
 import ru.fominmv.simplechat.core.Message
 import ru.fominmv.simplechat.client.event.CascadeEventListener
 
 
-trait Client extends Openable:
-    def state:         State
+trait Client extends LifecycleDriven:
     def protocol:      Protocol
     def eventListener: CascadeEventListener
 
@@ -17,10 +16,6 @@ trait Client extends Openable:
 
     @throws[ClosedException]("When closed")
     def name_=(name: String): Unit
-
-    override def closed: Boolean =
-        state == State.CLOSING ||
-        state == State.CLOSED
 
     @throws[ClosedException]("When closed")
     def sendMessageToServer(text: String): Unit
