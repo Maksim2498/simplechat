@@ -103,8 +103,11 @@ class TcpServer(
 
     override def open: Unit =
         _lifecyclePhase synchronized {
-            ClosedException.checkOpen(this, "Server is closed")
+            if !canOpen then
+                return
+
             concurentEventListener.publishPreOpen
+
             _lifecyclePhase = OPENING
         }
 
@@ -122,7 +125,7 @@ class TcpServer(
 
     override def close: Unit =
         _lifecyclePhase synchronized {
-            if closed then
+            if !canClose then
                 return
 
             concurentEventListener.publishPreClose
