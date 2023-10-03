@@ -24,3 +24,4 @@ To execute a command first type `/` and then a command name. Command names are c
 |------------|-----------------|----------------------|
 | `close`    | -               | Closes shell         |
 | `help`     | -               | Prints help message  |
+| `set-name` | `<new name>`    | Sets name            |
