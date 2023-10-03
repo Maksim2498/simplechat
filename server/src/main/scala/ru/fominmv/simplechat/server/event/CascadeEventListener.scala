@@ -3,8 +3,6 @@ package ru.fominmv.simplechat.server.event
 
 import scala.collection.mutable.ArrayBuffer
 
-import ru.fominmv.simplechat.server.Client
-
 
 class CascadeEventListener extends EventListener:
     val eventListeners = ArrayBuffer[EventListener]()
