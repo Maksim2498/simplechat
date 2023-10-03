@@ -8,7 +8,7 @@ import ru.fominmv.simplechat.server.Client
 trait EventListener:
     def on(event: Event): Unit
 
-    // Life-Cycle:
+    // Lifecycle:
 
     def publishPreOpen: Unit =
         on(PreOpenEvent())
