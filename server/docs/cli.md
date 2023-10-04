@@ -47,9 +47,9 @@ It will look like this: `--port 1502` or `--port=1502`.
 | `--buffering-duration`   | `duration`          | `0s`          | Specifies how long messages should be buffered before broadcasting them (if 0s then message buffering is disabled)                     |
 | `--broadcast-messages`   | `boolean`           | `true`        | Enables or disables broadcasting of received messages to all clients                                                                   |
 | `--print-messages`       | `boolean`           | `true`        | Enables or disables printing of received messages                                                                                      |
-| `--port`, `-p`           | `int`               | `24982`       | Specifies server port                                                                                                                  |
-| `--backlog`              | `int`               | `50`          | Sepcifies limit of simultaneous connection attempts to the server                                                                      |
-| `--max-pending-commands` | `int`               | `50`          | Specifies how many commands may be sent to client without response before connection closure (if 0 then all responses will be ignored) |
+| `--port`, `-p`           | `uint`              | `24982`       | Specifies server port                                                                                                                  |
+| `--backlog`              | `uint`              | `50`          | Sepcifies limit of simultaneous connection attempts to the server                                                                      |
+| `--max-pending-commands` | `uint`              | `50`          | Specifies how many commands may be sent to client without response before connection closure (if 0 then all responses will be ignored) |
 | `--name`, `-n`           | `string`            | `"<Server>"`  | Specifies server name                                                                                                                  |
 | `--ping-interval`        | `duration`          | `10s`         | Specifies delay between clients pinging (if 0 then pinging is disabled)                                                                |
 | `--protocol`, `-P`       | `"text" | "binary"` | `"text"`      | Specifies server protocol type                                                                                                         |
