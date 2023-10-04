@@ -14,13 +14,14 @@ import org.jline.reader.{
     UserInterruptException,
 }
 
-import ru.fominmv.simplechat.core.cli.error.ConsoleInterruptedException
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.util.lifecycle.Closeable
 import ru.fominmv.simplechat.core.util.RuntimeUtil.{
     addShutdownHook,
     removeShutdownHook,
 }
+
+import error.ConsoleInterruptedException
 
 
 trait Console extends Closeable:

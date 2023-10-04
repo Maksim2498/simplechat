@@ -6,7 +6,8 @@ import ru.fominmv.simplechat.core.cli.{
     Command,
     Shell => ShellTrait,
 }
-import ru.fominmv.simplechat.client.event.{
+
+import event.{
     Event,
     PostCloseEvent,
     EventListener,

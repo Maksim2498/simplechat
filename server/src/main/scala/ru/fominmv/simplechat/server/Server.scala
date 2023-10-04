@@ -5,7 +5,8 @@ import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.protocol.Protocol
 import ru.fominmv.simplechat.core.util.lifecycle.{LifecycleDriven, LifecyclePhase}
 import ru.fominmv.simplechat.core.Message
-import ru.fominmv.simplechat.server.event.CascadeEventListener
+
+import event.CascadeEventListener
 
 
 trait Server extends LifecycleDriven:

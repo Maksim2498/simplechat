@@ -5,7 +5,8 @@ import scala.concurrent.duration.FiniteDuration
 import java.net.InetAddress
 
 import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.client.event.{CascadeEventListener, LogEventListener}
+
+import event.{CascadeEventListener, LogEventListener}
 
 
 class ClientBuilder(

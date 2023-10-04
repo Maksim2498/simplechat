@@ -6,10 +6,12 @@ import ru.fominmv.simplechat.core.cli.{
     Command,
     Shell => ShellTrait,
 }
-import ru.fominmv.simplechat.server.event.EventListener
-import ru.fominmv.simplechat.server.event.Event
-import ru.fominmv.simplechat.server.event.PostCloseEvent
-import ru.fominmv.simplechat.server.event.PreCloseEvent
+
+import event.{
+    Event,
+    EventListener,
+    PostCloseEvent,
+}
 
 
 class Shell(val server: Server) extends ShellTrait:

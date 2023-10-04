@@ -3,7 +3,7 @@ package ru.fominmv.simplechat.core.protocol
 
 import java.io.{InputStream, OutputStream, IOException}
 
-import ru.fominmv.simplechat.core.protocol.error.ProtocolException
+import error.ProtocolException
 
 
 trait Protocol:

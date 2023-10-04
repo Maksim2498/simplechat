@@ -33,6 +33,7 @@ import ru.fominmv.simplechat.core.protocol.{
     SendMessageClientCommand,
     SetNameClientCommand,
     
+    ServerPacket,
     ServerCommand,
     PingServerCommand,
     CloseServerCommand,
@@ -43,14 +44,10 @@ import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
-import ru.fominmv.simplechat.server.event.{
-    EventListener,
-    ConcurentEventListener,
-    CascadeEventListener,
-}
-import ru.fominmv.simplechat.server.Config.*
-import ru.fominmv.simplechat.server.{Client => ClientTrait}
-import ru.fominmv.simplechat.core.protocol.ServerPacket
+
+import event.{ConcurentEventListener, CascadeEventListener}
+import Config.*
+import Client as ClientTrait
 
 
 class TcpServer(

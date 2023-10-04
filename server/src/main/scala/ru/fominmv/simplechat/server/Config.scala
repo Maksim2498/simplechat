@@ -5,8 +5,6 @@ import scala.concurrent.duration.*
 
 import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.Protocol
-import ru.fominmv.simplechat.core.{NameValidator, DefaultNameValidator}
-import ru.fominmv.simplechat.server.event.EventListener
 
 
 case class Config(

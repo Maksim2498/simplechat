@@ -1,7 +1,7 @@
 package ru.fominmv.simplechat.core
 
 
-import ru.fominmv.simplechat.core.util.StringExtension.{escape}
+import util.StringExtension.{escape}
 
 
 final case class Message(

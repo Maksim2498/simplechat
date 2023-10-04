@@ -43,7 +43,8 @@ import ru.fominmv.simplechat.core.util.StringExtension.escape
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.core.util.UnsignedUtil.*
 import ru.fominmv.simplechat.core.Message
-import ru.fominmv.simplechat.client.event.{ConcurentEventListener, CascadeEventListener}
+
+import event.{ConcurentEventListener, CascadeEventListener}
 
 
 class TcpClient private (
