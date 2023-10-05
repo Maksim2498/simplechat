@@ -41,7 +41,7 @@ import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.escape
 import ru.fominmv.simplechat.core.util.ThreadUtil
-import ru.fominmv.simplechat.core.util.UnsignedUtil.*
+import ru.fominmv.simplechat.core.util.UnsignedUtil.USHORT_MAX
 import ru.fominmv.simplechat.core.Message
 
 import event.{ConcurentEventListener, CascadeEventListener}
@@ -91,23 +91,32 @@ class TcpClient private (
             concurentEventListener.publishDisconnected
 
     override def open: Unit =
-        _lifecyclePhase synchronized {
-            ClosedException.checkOpen(this, "Client is closed")
-            concurentEventListener.publishPreOpen
-            _lifecyclePhase = OPENING
-        }
+        try
+            _lifecyclePhase synchronized {
+                ClosedException.checkOpen(this, "Client is closed")
+                concurentEventListener.publishPreOpen
+                _lifecyclePhase = OPENING
+            }
 
-        connect
-        startPingingThreadIfNeeded
-        startPacketReceivingThread
-        waitThreadsStarted
+            logger debug "Opening..."
 
-        _lifecyclePhase = OPEN
+            connect
+            startPingingThreadIfNeeded
+            startPacketReceivingThread
+            waitThreadsStarted
 
-        concurentEventListener.publishPostOpen
+            _lifecyclePhase = OPEN
 
-        if _name != None then
-            name = _name.get
+            logger debug "Opened"
+
+            concurentEventListener.publishPostOpen
+
+            if _name != None then
+                name = _name.get
+        catch
+            case e: Exception =>
+                _lifecyclePhase = CLOSED
+                throw e
 
 
     @volatile
@@ -138,13 +147,13 @@ class TcpClient private (
 
 
     if !((0 to USHORT_MAX) contains port) then
-        throw IllegalArgumentException("port must be in range [0, 65535]")
+        throw IllegalArgumentException("<port> must be in range [0, 65535]")
 
     if pingInterval < 0.seconds then
-        throw IllegalArgumentException("pingInterval must be non-negative")
+        throw IllegalArgumentException("<pingInterval> must be non-negative")
 
     if maxPendingCommands < 0 then
-        throw IllegalArgumentException("maxPendingCommands must be non-negative")
+        throw IllegalArgumentException("<maxPendingCommands> must be non-negative")
 
 
     private def makeNextSendMessageCommandCode(text: String): Short =
@@ -442,9 +451,9 @@ class TcpClient private (
         if pendingCommandCodes != null then
             pendingCommandCodes.clear
 
-        logger debug "Closed"
-
         _lifecyclePhase = CLOSED
+
+        logger debug "Closed"
 
         concurentEventListener.publishPostClose
 
