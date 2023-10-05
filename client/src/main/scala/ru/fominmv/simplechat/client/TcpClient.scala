@@ -56,6 +56,16 @@ class TcpClient private (
     override val protocol:           Protocol,
     override val eventListener:      CascadeEventListener,
 ) extends Client:
+    if !((0 to USHORT_MAX) contains port) then
+        throw IllegalArgumentException("<port> must be in range [0, 65535]")
+
+    if pingInterval < 0.seconds then
+        throw IllegalArgumentException("<pingInterval> must be non-negative")
+
+    if maxPendingCommands < 0 then
+        throw IllegalArgumentException("<maxPendingCommands> must be non-negative")
+
+
     override def lifecyclePhase: LifecyclePhase =
         _lifecyclePhase
 
@@ -117,7 +127,7 @@ class TcpClient private (
             case e: Exception =>
                 _lifecyclePhase = CLOSED
                 throw e
-
+    
 
     @volatile
     private var _name                          = initName
@@ -144,16 +154,6 @@ class TcpClient private (
         () => packageReceivingThreadBody,
         "Package Receiver",
     )
-
-
-    if !((0 to USHORT_MAX) contains port) then
-        throw IllegalArgumentException("<port> must be in range [0, 65535]")
-
-    if pingInterval < 0.seconds then
-        throw IllegalArgumentException("<pingInterval> must be non-negative")
-
-    if maxPendingCommands < 0 then
-        throw IllegalArgumentException("<maxPendingCommands> must be non-negative")
 
 
     private def makeNextSendMessageCommandCode(text: String): Short =
