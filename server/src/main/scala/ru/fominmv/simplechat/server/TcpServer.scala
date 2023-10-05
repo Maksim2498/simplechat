@@ -507,21 +507,15 @@ class TcpServer(
 
         private def onPingCommand(code: Short): Unit =
             logger debug s"Received ping command: $code"
-
             sendResponse(code, OK)
-            
             logger debug "Pong"
-
             concurentEventListener publishPinged makeSnapshot
 
         private def onCloseCommand(code: Short): Unit =
             logger debug s"Received close command: $code"
-
             sendResponse(code, OK)
             closeWithoutNotifying
-
             logger debug "Disconnected"
-
             concurentEventListener publishDisconnected makeSnapshot
 
         private def onSetNameCommand(code: Short, name: String): Unit =
