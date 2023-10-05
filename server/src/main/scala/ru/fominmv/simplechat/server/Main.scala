@@ -3,6 +3,8 @@ package ru.fominmv.simplechat.server
 
 import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
+import java.net.InetAddress
+
 import scopt.{OParser, Read}
 
 import org.apache.logging.log4j.LogManager
@@ -26,16 +28,16 @@ object Main:
 
             val config = configOption.get
 
-            if !config.run then
+            if !config.doRun then
                 return
 
-            configureLogger(config.debug)
+            configureLogger(config.doDebug)
 
             try
                 run(config)
             catch
                 case e: Exception =>
-                    if config.debug then
+                    if config.doDebug then
                         e.printStackTrace
                     else
                         logger error e
@@ -56,15 +58,15 @@ object Main:
 
             help('h', "help")
                 .text("Prints help message and quits")
-                .action((v, c) => c.copy(run = false)),
+                .action((v, c) => c.copy(doRun = false)),
 
             version('v', "version")
                 .text("Prints version and quits")
-                .action((v, c) => c.copy(run = false)),
+                .action((v, c) => c.copy(doRun = false)),
 
             opt[Unit]('d', "debug")
                 .text("Enables debug mode")
-                .action((v, c) => c.copy(debug = true)),
+                .action((v, c) => c.copy(doDebug = true)),
 
             opt[FiniteDuration]("buffering-duration")
                 .text("Specifies how long messages should be buffered before broadcasting them (if 0s then message buffering is disabled)")
@@ -131,6 +133,30 @@ object Main:
             opt[Protocol]('P', "protocol")
                 .text("Specifies server protocol type")
                 .action((v, c) => c.copy(protocol = v)),
+
+            opt[Unit]('m', "multicast")
+                .text("Enables message multicasting (if disabled then server sends messages to the clients via TCP unicast, else it uses UDP mulicast)")
+                .action((v, c) => c.copy(doMulticast = true)),
+
+            opt[InetAddress]("multicast-address")
+                .text("Specifies multicast address")
+                .action((v, c) => c.copy(multicastAddress = v))
+                .validate(v =>
+                    if v.isMulticastAddress then
+                        success
+                    else
+                        failure("Option --multicast-address must be a multicast address")
+                ),
+
+            opt[Int]("multicast-port")
+                .text("Specifies multicast port")
+                .action((v, c) => c.copy(multicastPort = v ))
+                .validate(
+                    if (0 to USHORT_MAX) contains _ then
+                        success
+                    else
+                        failure("Option --multicast-port must be in range [0, 65535]")
+                ),
         )
 
     private def run(config: Config): Unit =
@@ -144,6 +170,9 @@ object Main:
             bufferingDuration  = config.bufferingDuration,
             pingInterval       = config.pingInterval,
             protocol           = config.protocol,
+            doMulticast        = config.doMulticast,
+            multicastAddress   = config.multicastAddress,
+            multicastPort      = config.multicastPort,
         )
 
         val server = builder.builderServer

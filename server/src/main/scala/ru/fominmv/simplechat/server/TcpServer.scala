@@ -3,6 +3,7 @@ package ru.fominmv.simplechat.server
 
 import scala.collection.mutable.{HashMap, Stack, HashSet}
 import scala.concurrent.duration.{FiniteDuration, DurationInt}
+import scala.util.control.Breaks.{breakable, break}
 import scala.util.Random
 
 import java.io.{
@@ -43,8 +44,10 @@ import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
 import ru.fominmv.simplechat.core.util.ThreadUtil
+import ru.fominmv.simplechat.core.util.UnsignedUtil.USHORT_MAX
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
 
+import event.error.EventAbortedException
 import event.{ConcurentEventListener, CascadeEventListener}
 import Config.*
 import Client as ClientTrait
@@ -60,10 +63,31 @@ class TcpServer(
     override val protocol:           Protocol             = DEFAULT_PROTOCOL,
     override val eventListener:      CascadeEventListener = CascadeEventListener(),
 ) extends Server:
+    if !((0 to USHORT_MAX) contains port) then
+        throw IllegalArgumentException("<port> must be in range [0, 65535]")
+
+    if maxPendingCommands < 0 then
+        throw IllegalArgumentException("<maxPendingCommands> must be non-negative")
+
+    if pingInterval < 0.seconds then
+        throw IllegalArgumentException("<pingClientsEvery> must be non-negative")
+
+
     override def pingClients(except: Set[Int] = Set()): Unit =
         ClosedException.checkOpen(this, "Server is closed")
 
-        concurentEventListener publishPrePingClients except
+        logger debug s"Pinging everyone${
+            if except.isEmpty then
+                ""
+            else s" except: ${except map("#" + _) mkString ", "}"
+        }..."
+
+        try
+            concurentEventListener publishPrePingClients except
+        catch
+            case _: EventAbortedException =>
+                logger debug "Pinging aborted"
+                return
 
         _clients synchronized {
             for
@@ -74,11 +98,24 @@ class TcpServer(
         }
 
         concurentEventListener publishPostPing except
+        logger debug "Pinged"
 
     override def broadcastMessage(message: Message, except: Set[Int] = Set()): Unit =
         ClosedException.checkOpen(this, "Server is closed")
 
-        concurentEventListener.publishPreBroadcastMessage(message, except)
+        logger debug s"Broadcasting message $message${
+            if except.isEmpty then
+                ""
+            else
+            s" excepting: ${except map("#" + _) mkString ", "}"
+        }..."
+
+        try
+            concurentEventListener.publishPreBroadcastMessage(message, except)
+        catch
+            case _: EventAbortedException =>
+                logger debug "Broadcasting aborted"
+                return
 
         _clients synchronized {
             for
@@ -89,6 +126,7 @@ class TcpServer(
         }
 
         concurentEventListener.publishPostBroadcastMessage(message, except)
+        logger debug "Message broadcasted"
 
     override def lifecyclePhase: LifecyclePhase =
         _lifecyclePhase
@@ -99,49 +137,64 @@ class TcpServer(
         }
 
     override def open: Unit =
-        _lifecyclePhase synchronized {
-            if !canOpen then
-                return
+        breakable {
+            _lifecyclePhase synchronized {
+                if !canOpen then
+                    break
 
-            concurentEventListener.publishPreOpen
+                logger debug "Opening..."
 
-            _lifecyclePhase = OPENING
+                try
+                    concurentEventListener.publishPreOpen
+                catch
+                    case _: EventAbortedException =>
+                        logger debug "Opening aborted"
+                        break
+
+                _lifecyclePhase = OPENING
+            }
+
+            startConnectionListeningThread
+            startPingingThreadIfNeeded
+            waitThreadsStarted
+
+            _lifecyclePhase = OPEN
+            concurentEventListener.publishPostOpen
+            logger debug "Opened"
+
+            if eventListener.eventListeners.isEmpty then
+                logger debug "No event listeners were registered"
+            else
+                logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
         }
-
-        logger debug "Opening..."
-
-        startConnectionListeningThread
-        startPingingThreadIfNeeded
-        waitThreadsStarted
-
-        logger debug "Opened"
-
-        _lifecyclePhase = OPEN
-
-        concurentEventListener.publishPostOpen
 
     override def close: Unit =
-        _lifecyclePhase synchronized {
-            if !canClose then
-                return
+        breakable {
+            _lifecyclePhase synchronized {
+                if !canClose then
+                    break
 
-            concurentEventListener.publishPreClose
+                logger debug "Closing..."
 
-            _lifecyclePhase = CLOSING
+                try
+                    concurentEventListener.publishPreClose
+                catch
+                    case _: EventAbortedException =>
+                        logger debug "Closing aborted"
+                        break
+
+                _lifecyclePhase = CLOSING
+            }
+
+            closeClients
+            closeSocket
+            stopConnectionListeningThread
+            stopPingingThread
+
+            _lifecyclePhase = CLOSED
+            concurentEventListener.publishPostClose
+            logger debug "Closed"
         }
-
-        logger debug "Closing..."
-
-        closeClients
-        closeSocket
-        stopConnectionListeningThread
-        stopPingingThread
-
-        logger debug "Closed"
-
-        _lifecyclePhase = CLOSED
-
-        concurentEventListener.publishPostClose
 
 
     @volatile
@@ -164,13 +217,6 @@ class TcpServer(
         )
     else
         null
-
-
-    if maxPendingCommands < 0 then
-        throw IllegalArgumentException("maxPendingCommands must be non-negative")
-
-    if pingInterval < 0.seconds then
-        throw IllegalArgumentException("pingClientsEvery must be non-negative")
 
 
     private def startConnectionListeningThread: Unit =
@@ -203,7 +249,7 @@ class TcpServer(
             notify()
         }
 
-        while !closed do
+        while running do
             try
                 logger debug "Waiting for connections..."
 
@@ -228,6 +274,10 @@ class TcpServer(
             catch
                 case e: Exception => onAnyException(e)
 
+        assert(closed)
+
+        logger debug "Finished"
+
     private def pingingThreadBody: Unit =
         logger debug "Started"
 
@@ -235,13 +285,17 @@ class TcpServer(
             notify()
         }
 
-        while !closed do
+        while running do
             try
                 logger debug "Waiting..."
                 Thread sleep pingInterval.toMillis
                 pingClients
             catch
                 case e: Exception => onAnyException(e)
+
+        assert(closed)
+
+        logger debug "Finished"
 
     private def closeClients: Unit =
         logger debug "Closing all clients..."
@@ -434,6 +488,10 @@ class TcpServer(
                     onPacket(packet)
                 catch
                     case e: Exception => onAnyException(e)
+
+            assert(closed)
+
+            logger debug "Finished"
 
         private def onPacket(packet: ClientPacket): Unit =
             packet match

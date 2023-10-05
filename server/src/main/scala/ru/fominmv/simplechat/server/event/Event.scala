@@ -10,21 +10,21 @@ sealed trait Event
 
 sealed trait LifeCycleEvent extends Event
 
-case class PreOpenEvent()   extends LifeCycleEvent
+case class PreOpenEvent()   extends LifeCycleEvent // Abortable
 case class PostOpenEvent()  extends LifeCycleEvent
-case class PreCloseEvent()  extends LifeCycleEvent
+case class PreCloseEvent()  extends LifeCycleEvent // Abortable
 case class PostCloseEvent() extends LifeCycleEvent
 
 
 sealed trait ServerEvent extends Event
 
-case class PrePingEvent(except: Set[Int] = Set[Int]())  extends ServerEvent
+case class PrePingEvent(except: Set[Int] = Set[Int]())  extends ServerEvent // Abortable
 case class PostPingEvent(except: Set[Int] = Set[Int]()) extends ServerEvent
 
 case class PreBroadcastMessageEvent(
     message: Message,
     except:  Set[Int] = Set[Int](),
-)  extends ServerEvent
+)  extends ServerEvent // Abortable
 
 case class PostBroadcastMessageEvent(
     message: Message,

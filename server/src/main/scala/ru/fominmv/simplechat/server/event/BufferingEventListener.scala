@@ -12,57 +12,66 @@ import ru.fominmv.simplechat.core.util.lifecycle.{LifecycleDriven, LifecyclePhas
 import ru.fominmv.simplechat.core.util.ThreadUtil
 import ru.fominmv.simplechat.server.Client
 
+import error.EventAbortedException
+
 
 class BufferingEventListener(
     val bufferingDuration: FiniteDuration = 10.seconds,
     val autoOpen:          Boolean        = true,
     val autoClose:         Boolean        = true,
 ) extends EventListener, LifecycleDriven:
+    if bufferingDuration <= 0.seconds then
+        throw IllegalArgumentException("<bufferDuration> must be positive")
+
+
     // External uses should be synchronized when open
     val eventListeners = ArrayBuffer[EventListener]()
+
 
     override def close: Unit =
         if !canClose then
             return
 
-        _lifecyclePhase = CLOSING
-
         logger debug "Closing..."
+        _lifecyclePhase = CLOSING
 
         stopPublishingThread
 
         eventListeners.clear
         buffer.clear
 
-        logger debug "Closed"
-
         _lifecyclePhase = CLOSED
+        logger debug "Closed"
 
     override def open: Unit =
         if !canOpen then
             return
 
-        _lifecyclePhase = OPENING
-
         logger debug "Opening..."
+        _lifecyclePhase = OPENING
 
         startPublishingThread
         waitPublishingThreadStarted
 
-        logger debug "Open"
-
         _lifecyclePhase = OPEN
+        logger debug "Opened"
 
     override def lifecyclePhase: LifecyclePhase =
         _lifecyclePhase
 
     override def on(event: Event): Unit =
-        ClosedException.checkOpen(this, "Event listener is closed")
+        event match
+            case PreOpenEvent() =>
+                if autoOpen then
+                    return this.open // Without "this." compilator complained
 
-        if autoOpen then
-            event match
-                case PreOpenEvent() => open
-                case _ =>
+            case PostCloseEvent() =>
+                if autoClose then
+                    return close
+
+            case _ =>
+
+        ClosedException.checkOpen(this, "Event listener is closed")
 
         logger debug "Buffering event..."
 
@@ -72,11 +81,6 @@ class BufferingEventListener(
 
         logger debug "Buffered"
 
-        if autoClose then
-            event match
-                case PostCloseEvent() => close
-                case _ =>
-        
 
     @volatile
     private var _lifecyclePhase = NEW
@@ -86,10 +90,6 @@ class BufferingEventListener(
         () => publishingThreadBody,
         "Publisher",
     )
-
-
-    if bufferingDuration <= 0.seconds then
-        throw IllegalArgumentException("bufferDuration must be positive")
 
 
     private def startPublishingThread: Unit =
@@ -115,13 +115,17 @@ class BufferingEventListener(
             notify()
         }
 
-        while !closed do
+        while running do
             try
                 logger debug "Waiting..."
                 Thread sleep bufferingDuration.toMillis
                 publish
             catch
                 case e: Exception => onAnyException(e)
+
+        assert(closed)
+
+        logger debug "Finished"
 
     private def publish: Unit =
         logger debug "Publishing events..."
@@ -146,8 +150,12 @@ class BufferingEventListener(
 
     private def onAnyException(exception: Exception): Unit =
         exception match
-            case _: InterruptedException => onInterruptedException
-            case e: Exception            => onException(e)
+            case _: EventAbortedException => onEventAbortedException
+            case _: InterruptedException  => onInterruptedException
+            case e: Exception             => onException(e)
+
+    private def onEventAbortedException: Unit =
+        logger debug "Event aborted"
 
     private def onInterruptedException: Unit =
         logger debug "Aborted: interrupted"

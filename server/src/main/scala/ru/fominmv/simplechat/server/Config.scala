@@ -3,13 +3,15 @@ package ru.fominmv.simplechat.server
 
 import scala.concurrent.duration.*
 
+import java.net.InetAddress
+
 import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.Protocol
 
 
 case class Config(
-    run:                Boolean        = Config.DEFAULT_RUN,
-    debug:              Boolean        = Config.DEFAULT_DEBUG,
+    doRun:              Boolean        = Config.DEFAULT_DO_RUN,
+    doDebug:            Boolean        = Config.DEFAULT_DO_DEBUG,
     port:               Int            = Config.DEFAULT_PORT,
     backlog:            Int            = Config.DEFAULT_BACKLOG,
     maxPendingCommands: Int            = Config.DEFAULT_MAX_PENDING_COMMANDS,
@@ -19,11 +21,14 @@ case class Config(
     name:               String         = Config.DEFAULT_NAME,
     protocol:           Protocol       = Config.DEFAULT_PROTOCOL,
     pingInterval:       FiniteDuration = Config.DEFAULT_PING_INTERVAL,
+    doMulticast:        Boolean        = Config.DEFAULT_DO_MULTICAST,
+    multicastAddress:   InetAddress    = Config.DEFAULT_MULTICAST_ADDRESS,
+    multicastPort:      Int            = Config.DEFAULT_MULTICAST_PORT,
 )
 
 object Config:
-    val DEFAULT_RUN:                  Boolean        = true
-    val DEFAULT_DEBUG:                Boolean        = false
+    val DEFAULT_DO_RUN:               Boolean        = true
+    val DEFAULT_DO_DEBUG:             Boolean        = false
     val DEFAULT_PORT:                 Int            = 24982
     val DEFAULT_BACKLOG:              Int            = 50
     val DEFAULT_MAX_PENDING_COMMANDS: Int            = 50
@@ -33,3 +38,6 @@ object Config:
     val DEFAULT_NAME:                 String         = "<Server>"
     val DEFAULT_PROTOCOL:             Protocol       = TextProtocol()
     val DEFAULT_PING_INTERVAL:        FiniteDuration = 10.seconds
+    val DEFAULT_DO_MULTICAST:         Boolean        = false
+    val DEFAULT_MULTICAST_ADDRESS:    InetAddress    = InetAddress getByAddress Array[Byte](233.toByte, 0, 0, 1)
+    val DEFAULT_MULTICAST_PORT:       Int            = 24982
