@@ -103,12 +103,13 @@ class TcpClient private (
     override def open: Unit =
         try
             _lifecyclePhase synchronized {
-                ClosedException.checkOpen(this, "Client is closed")
+                if !canOpen then
+                    return
+
+                logger debug "Opening..."
                 concurentEventListener.publishPreOpen
                 _lifecyclePhase = OPENING
             }
-
-            logger debug "Opening..."
 
             connect
             startPingingThreadIfNeeded
@@ -116,10 +117,8 @@ class TcpClient private (
             waitThreadsStarted
 
             _lifecyclePhase = OPEN
-
-            logger debug "Opened"
-
             concurentEventListener.publishPostOpen
+            logger debug "Opened"
 
             if _name != None then
                 name = _name.get
@@ -426,15 +425,13 @@ class TcpClient private (
 
     private def closeGenerally(doSendCloseCommand: Boolean = false): Boolean =
         _lifecyclePhase synchronized {
-            if closed then
+            if !canClose then
                 return false
 
             concurentEventListener.publishPreClose
-
+            logger debug "Closing..."
             _lifecyclePhase = CLOSING
         }
-
-        logger debug "Closing..."
 
         if doSendCloseCommand then
             try
@@ -452,9 +449,7 @@ class TcpClient private (
             pendingCommandCodes.clear
 
         _lifecyclePhase = CLOSED
-
         logger debug "Closed"
-
         concurentEventListener.publishPostClose
 
         true
