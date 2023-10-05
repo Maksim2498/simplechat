@@ -13,5 +13,9 @@ trait LifecycleDriven extends Openable:
     def canClose: Boolean =
         lifecyclePhase == OPEN
 
+    def running: Boolean =
+        lifecyclePhase == OPENING ||
+        lifecyclePhase == OPEN
+
     override def closed: Boolean =
         lifecyclePhase != OPEN

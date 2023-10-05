@@ -235,13 +235,17 @@ class TcpClient private (
             notify()
         }
 
-        while !closed do
+        while running do
             try
                 logger debug "Waiting..."
                 Thread sleep pingInterval.toMillis
                 pingServer
             catch
                 case e: Exception => onAnyException(e)
+
+        assert(closed)
+
+        logger debug "Finished"
 
     private def packageReceivingThreadBody: Unit =
         logger debug "Started"
@@ -250,7 +254,7 @@ class TcpClient private (
             notify()
         }
 
-        while !closed do
+        while running do
             try
                 logger debug "Waiting for packets..."
 
@@ -261,6 +265,10 @@ class TcpClient private (
                 onPacket(packet)
             catch
                 case e: Exception => onAnyException(e)
+
+        assert(closed)
+
+        logger debug "Finished"
 
     private def inputStream: InputStream =
         socket.getInputStream
