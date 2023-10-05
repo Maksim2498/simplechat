@@ -7,6 +7,9 @@ import ru.fominmv.simplechat.core.Message
 trait EventListener:
     def on(event: Event): Unit
 
+    def name: String =
+        getClass.getSimpleName
+
     // Lifecycle:
 
     def publishPreOpen: Unit =

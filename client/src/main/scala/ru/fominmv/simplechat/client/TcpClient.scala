@@ -120,6 +120,11 @@ class TcpClient private (
             concurentEventListener.publishPostOpen
             logger debug "Opened"
 
+            if eventListener.eventListeners.isEmpty then
+                logger debug "No event listeners were registered"
+            else
+                logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
+
             if _name != None then
                 name = _name.get
         catch
