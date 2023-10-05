@@ -53,21 +53,16 @@ class MulticastEventListener(
         logger debug "Closed"
 
     override def open: Unit =
-        try
-            if !canOpen then
-                return
+        if !canOpen then
+            return
 
-            _lifecyclePhase = OPENING
-            logger debug "Opening..."
+        _lifecyclePhase = OPENING
+        logger debug "Opening..."
 
-            openSocket
+        // Left for future
 
-            _lifecyclePhase = OPEN
-            logger debug "Opened"
-        catch
-            case e: Exception =>
-                _lifecyclePhase = CLOSED
-                throw e
+        _lifecyclePhase = OPEN
+        logger debug "Opened"
 
     override def lifecyclePhase: LifecyclePhase =
         _lifecyclePhase
@@ -101,33 +96,6 @@ class MulticastEventListener(
 
     private val socket          = MulticastSocket()
 
-
-    private def openSocket: Unit =
-        assert(!socket.isClosed)
-
-        logger debug "Opening socket..."
-
-        // socket.joinGroup(
-        //     InetSocketAddress(address, port),
-        //     findNetworkInterface,
-        // )
-
-        logger debug "Socket is opened"
-
-    private def findNetworkInterface: NetworkInterface =
-        logger debug "Searching for appropriate network interface..."
-
-        val interfaces = NetworkInterface.getNetworkInterfaces
-
-        while interfaces.hasMoreElements do
-            val interface = interfaces.nextElement
-
-            if  interface.isUp &&
-                interface.supportsMulticast then
-                logger debug s"Found network interface: ${interface.getDisplayName}"
-                return interface
-
-        throw RuntimeException("Failed to obtain network interface")
 
     private def closeSocket: Unit =
         assert(!socket.isClosed)
