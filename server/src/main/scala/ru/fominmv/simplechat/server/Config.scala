@@ -39,5 +39,5 @@ object Config:
     val DEFAULT_PROTOCOL:             Protocol       = TextProtocol()
     val DEFAULT_PING_INTERVAL:        FiniteDuration = 10.seconds
     val DEFAULT_DO_MULTICAST:         Boolean        = false
-    val DEFAULT_MULTICAST_ADDRESS:    InetAddress    = InetAddress getByAddress Array[Byte](233.toByte, 0, 0, 1)
+    val DEFAULT_MULTICAST_ADDRESS:    InetAddress    = InetAddress getByName "233.0.0.1"
     val DEFAULT_MULTICAST_PORT:       Int            = 24982
