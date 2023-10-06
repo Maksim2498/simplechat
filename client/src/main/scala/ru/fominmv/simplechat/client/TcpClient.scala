@@ -47,7 +47,7 @@ import ru.fominmv.simplechat.core.Message
 import event.{ConcurentEventListener, CascadeEventListener}
 
 
-class TcpClient private (
+class TcpClient protected (
                  initName:           Option[String],
              val address:            InetAddress,
              val port:               Int,
@@ -139,9 +139,9 @@ class TcpClient private (
         )
     else
         null
-    protected val packageReceivingThread         = Thread(
-        () => packageReceivingThreadBody,
-        "Package Receiver",
+    protected val packetReceivingThread          = Thread(
+        () => packetReceivingThreadBody,
+        "Packet Receiver",
     )
 
 
@@ -224,7 +224,7 @@ class TcpClient private (
 
     protected def startPacketReceivingThread: Unit =
         logger debug "Starting packet receiving thread..."
-        packageReceivingThread.start
+        packetReceivingThread.start
 
     protected def waitThreadsStarted: Unit =
         synchronized {
@@ -234,7 +234,7 @@ class TcpClient private (
                 catch
                     case _: InterruptedException => onInterruptedException
 
-                packageReceivingThread.getState == Thread.State.NEW ||
+                packetReceivingThread.getState == Thread.State.NEW ||
                 pingingThread                   != null             &&
                 pingingThread.getState          == Thread.State.NEW
             do ()
@@ -259,7 +259,7 @@ class TcpClient private (
 
         logger debug "Finished"
 
-    protected def packageReceivingThreadBody: Unit =
+    protected def packetReceivingThreadBody: Unit =
         logger debug "Started"
 
         synchronized {
@@ -513,7 +513,7 @@ class TcpClient private (
             ThreadUtil.stop(pingingThread, Some(logger))
 
     protected def stopPacketReceivingThread: Unit =
-        ThreadUtil.stop(packageReceivingThread, Some(logger))
+        ThreadUtil.stop(packetReceivingThread, Some(logger))
 
 object TcpClient:
     def apply(
