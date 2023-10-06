@@ -106,27 +106,11 @@ class TcpClient private (
                 if !canOpen then
                     return
 
-                logger debug "Opening..."
-                concurentEventListener.publishPreOpen
-                _lifecyclePhase = OPENING
+                onPreOpen
             }
 
-            connect
-            startPingingThreadIfNeeded
-            startPacketReceivingThread
-            waitThreadsStarted
-
-            _lifecyclePhase = OPEN
-            concurentEventListener.publishPostOpen
-            logger debug "Opened"
-
-            if eventListener.eventListeners.isEmpty then
-                logger debug "No event listeners were registered"
-            else
-                logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
-
-            if _name != None then
-                name = _name.get
+            onOpening
+            onPostOpen
         catch
             case e: Exception =>
                 _lifecyclePhase = CLOSED
@@ -134,33 +118,34 @@ class TcpClient private (
     
 
     @volatile
-    private var _name                          = initName
+    protected var _name                          = initName
 
     @volatile
-    private var _lifecyclePhase                = NEW
+    protected var _lifecyclePhase                = NEW
 
-    private val concurentEventListener         = ConcurentEventListener(eventListener)
-    private val socket                         = Socket()
-    private val sendMessagePendingCommandCodes = HashMap[Short, String]()
-    private val nameSetPendingCommandCodes     = HashMap[Short, String]()
-    private val pendingCommandCodes            = if maxPendingCommands != 0 then
+    protected val logger                         = LogManager getLogger getClass
+    protected val concurentEventListener         = ConcurentEventListener(eventListener)
+    protected val socket                         = Socket()
+    protected val sendMessagePendingCommandCodes = HashMap[Short, String]()
+    protected val nameSetPendingCommandCodes     = HashMap[Short, String]()
+    protected val pendingCommandCodes            = if maxPendingCommands != 0 then
         HashSet[Short]()
     else
         null
-    private val pingingThread                  = if pingInterval != 0.seconds then
+    protected val pingingThread                  = if pingInterval != 0.seconds then
         Thread(
             () => pingingThreadBody,
             "Pinger",
         )
     else
         null
-    private val packageReceivingThread         = Thread(
+    protected val packageReceivingThread         = Thread(
         () => packageReceivingThreadBody,
         "Package Receiver",
     )
 
 
-    private def makeNextSendMessageCommandCode(text: String): Short =
+    protected def makeNextSendMessageCommandCode(text: String): Short =
         checkPendingCommandCount
 
         val code = Random.nextInt.toShort
@@ -169,7 +154,7 @@ class TcpClient private (
 
         code
 
-    private def makeNextSetNameCommandCode(name: String): Short =
+    protected def makeNextSetNameCommandCode(name: String): Short =
         checkPendingCommandCount
 
         val code = Random.nextInt.toShort
@@ -178,7 +163,7 @@ class TcpClient private (
 
         code
 
-    private def makeNextCommandCode: Short =
+    protected def makeNextCommandCode: Short =
         checkPendingCommandCount
 
         val code = Random.nextInt.toShort
@@ -188,11 +173,11 @@ class TcpClient private (
 
         code
 
-    private def checkPendingCommandCount: Unit =
+    protected def checkPendingCommandCount: Unit =
         if totalPendingCommandCount >= maxPendingCommands then
             throw RuntimeException("Pending commands limit is reached")
 
-    private def totalPendingCommandCount: Int =
+    protected def totalPendingCommandCount: Int =
         if pendingCommandCodes != null then
             sendMessagePendingCommandCodes.size +
             nameSetPendingCommandCodes.size     +
@@ -200,21 +185,48 @@ class TcpClient private (
         else
             0
 
-    private def connect: Unit =
+    protected def onPreOpen: Unit =
+        logger debug "Opening..."
+        concurentEventListener.publishPreOpen
+        _lifecyclePhase = OPENING
+
+    protected def onOpening: Unit =
+        connect
+        startThreads
+        waitThreadsStarted
+
+    protected def startThreads: Unit =
+        startPingingThreadIfNeeded
+        startPacketReceivingThread
+
+    protected def onPostOpen: Unit =
+        _lifecyclePhase = OPEN
+        concurentEventListener.publishPostOpen
+        logger debug "Opened"
+
+        if eventListener.eventListeners.isEmpty then
+            logger debug "No event listeners were registered"
+        else
+            logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
+
+        if _name != None then
+            name = _name.get
+
+    protected def connect: Unit =
         logger debug "Connecting..."
         socket connect InetSocketAddress(address, port)
         logger debug "Connected"
 
-    private def startPingingThreadIfNeeded: Unit =
+    protected def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
             logger debug "Starting pinging thread..."
             pingingThread.start
 
-    private def startPacketReceivingThread: Unit =
+    protected def startPacketReceivingThread: Unit =
         logger debug "Starting packet receiving thread..."
         packageReceivingThread.start
 
-    private def waitThreadsStarted: Unit =
+    protected def waitThreadsStarted: Unit =
         synchronized {
             while
                 try
@@ -228,7 +240,7 @@ class TcpClient private (
             do ()
         }
 
-    private def pingingThreadBody: Unit =
+    protected def pingingThreadBody: Unit =
         logger debug "Started"
 
         synchronized {
@@ -247,7 +259,7 @@ class TcpClient private (
 
         logger debug "Finished"
 
-    private def packageReceivingThreadBody: Unit =
+    protected def packageReceivingThreadBody: Unit =
         logger debug "Started"
 
         synchronized {
@@ -270,18 +282,18 @@ class TcpClient private (
 
         logger debug "Finished"
 
-    private def inputStream: InputStream =
+    protected def inputStream: InputStream =
         socket.getInputStream
 
-    private def outputStream: OutputStream =
+    protected def outputStream: OutputStream =
         socket.getOutputStream
 
-    private def onPacket(packet: ServerPacket): Unit =
+    protected def onPacket(packet: ServerPacket): Unit =
         packet match
             case Response(code, status) => onResponse(code, status)
             case command: ServerCommand => onCommand(command)
 
-    private def onResponse(code: Short, status: Status): Unit =
+    protected def onResponse(code: Short, status: Status): Unit =
         logger debug s"Got response: $code - $status"
 
         if status == FATAL then
@@ -302,12 +314,12 @@ class TcpClient private (
 
         onGeneralResponse(status, code)
 
-    private def onFatalResponse: Unit =
+    protected def onFatalResponse: Unit =
         logger debug "Server responded with fatal error"
         closeGenerally
         concurentEventListener.publishFatalServerError
 
-    private def onNameResponse(status: Status, code: Short, newName: String): Unit =
+    protected def onNameResponse(status: Status, code: Short, newName: String): Unit =
         val oldName = _name
 
         if status == OK then
@@ -318,7 +330,7 @@ class TcpClient private (
             logger debug "Name set rejected"
             concurentEventListener publishNameRejected(newName, oldName)
 
-    private def onMessageResponse(status: Status, code: Short, text: String): Unit =
+    protected def onMessageResponse(status: Status, code: Short, text: String): Unit =
         val message = makeMessage(text)
 
         if status == OK then
@@ -328,7 +340,7 @@ class TcpClient private (
             logger debug "Message accepted"
             concurentEventListener publishMessageRejected message
 
-    private def onGeneralResponse(status: Status, code: Short): Unit =
+    protected def onGeneralResponse(status: Status, code: Short): Unit =
         if pendingCommandCodes == null || (pendingCommandCodes remove code) then
             logger debug "Response accepted"
             return
@@ -337,48 +349,48 @@ class TcpClient private (
 
         throw ProtocolException()
 
-    private def onCommand(command: ServerCommand): Unit =
+    protected def onCommand(command: ServerCommand): Unit =
         command match
             case PingServerCommand(code)                 => onPingCommand(code)
             case CloseServerCommand(code)                => onCloseCommand(code)
             case SendMessageServerCommand(code, message) => onSendMessageCommand(code, message)
 
-    private def onPingCommand(code: Short): Unit =
+    protected def onPingCommand(code: Short): Unit =
         logger debug s"Received ping command: $code"
         sendResponse(code, OK)
         logger debug "Pong"
         concurentEventListener.publishPinged
 
-    private def onCloseCommand(code: Short): Unit =
+    protected def onCloseCommand(code: Short): Unit =
         logger debug s"Received disconnect command: $code"
         sendResponse(code, OK)
         closeGenerally
         logger debug "Disconnected"
         concurentEventListener.publishDisconnectedByServer
 
-    private def onSendMessageCommand(code: Short, message: Message): Unit =
+    protected def onSendMessageCommand(code: Short, message: Message): Unit =
         logger debug s"Received send message command: $code - $message"
         sendResponse(code, OK)
         concurentEventListener publishMessageReceived message
 
-    private def sendResponse(code: Short, status: Status): Unit =
+    protected def sendResponse(code: Short, status: Status): Unit =
         logger debug s"Sending response: $code - $status"
         sendPacket(Response(code, status))
         logger debug "Response sent"
 
-    private def sendPingCommand(code: Short): Unit =
+    protected def sendPingCommand(code: Short): Unit =
         concurentEventListener.publishPrePinging
         logger debug s"Sending ping command: $code..."
         sendCommand(PingClientCommand(code))
         logger debug "Ping command is sent"
         concurentEventListener.publishPostPinging
 
-    private def sendCloseCommand(code: Short): Unit =
+    protected def sendCloseCommand(code: Short): Unit =
         logger debug s"Sending close command: $code..."
         sendCommand(CloseClientCommand(code))
         logger debug "Close command is sent"
 
-    private def sendSendMessageCommand(code: Short, text: String): Unit =
+    protected def sendSendMessageCommand(code: Short, text: String): Unit =
         val message = makeMessage(text)
 
         concurentEventListener publishPreTrySendMessage message
@@ -387,7 +399,7 @@ class TcpClient private (
         logger debug "Send message command is sent"
         concurentEventListener publishPostTrySendMessage message
 
-    private def sendSetNameCommand(code: Short, name: String): Unit =
+    protected def sendSetNameCommand(code: Short, name: String): Unit =
         concurentEventListener.publishPreTrySetName(name, _name)
         logger debug s"Sending set name command: $code - \"${name.escape}\"..."
         sendCommand(SetNameClientCommand(code, name))
@@ -395,15 +407,15 @@ class TcpClient private (
         logger debug "Set name command is sent"
         concurentEventListener.publishPostTrySetName(name, _name)
 
-    private def sendCommand(command: ClientCommand): Unit =
+    protected def sendCommand(command: ClientCommand): Unit =
         sendPacket(command)
 
-    private def sendPacket(packet: ClientPacket): Unit =
+    protected def sendPacket(packet: ClientPacket): Unit =
         outputStream synchronized {
             protocol.writePacket(packet, outputStream)
         }
 
-    private def onAnyException(exception: Exception): Unit =
+    protected def onAnyException(exception: Exception): Unit =
         exception match
             case ie:   InterruptedException   => onInterruptedException(ie)
             case iioe: InterruptedIOException => onInterruptedIOException(iioe)
@@ -411,63 +423,82 @@ class TcpClient private (
             case ioe:  IOException            => onIOException(ioe)
             case e:    Exception              => onException(e)
 
-    private def onInterruptedException(exception: InterruptedException): Unit =
+    protected def onInterruptedException(exception: InterruptedException): Unit =
         logger debug "Aborted: interrupted"
         Thread.interrupted
 
-    private def onInterruptedIOException(exception: InterruptedIOException): Unit =
+    protected def onInterruptedIOException(exception: InterruptedIOException): Unit =
         logger debug "Aborted: I/O interrupted"
         Thread.interrupted
 
-    private def onClosedException(exception: ClosedException): Unit =
+    protected def onClosedException(exception: ClosedException): Unit =
         logger debug s"Aborted: ${exception.getMessage}"
 
-    private def onIOException(exception: IOException): Unit =
+    protected def onIOException(exception: IOException): Unit =
         if closed then
             logger debug "Aborted: socket is closed"
         else
             onException(exception)
 
-    private def onException(exception: Exception): Unit =
+    protected def onException(exception: Exception): Unit =
         logger error exception
         closeGenerally(true)
         concurentEventListener.publishConnectionLost
 
-    private def closeGenerally: Boolean =
+    protected def closeGenerally: Boolean =
         closeGenerally()
 
-    private def closeGenerally(doSendCloseCommand: Boolean = false): Boolean =
+    protected def closeGenerally(doSendCloseCommand: Boolean = false): Boolean =
         _lifecyclePhase synchronized {
             if !canClose then
                 return false
 
-            concurentEventListener.publishPreClose
-            logger debug "Closing..."
-            _lifecyclePhase = CLOSING
+            onPreClose
         }
 
+        onClosing(doSendCloseCommand)
+        onPostClose
+
+        true
+
+    protected def onPreClose: Unit =
+        concurentEventListener.publishPreClose
+        logger debug "Closing..."
+        _lifecyclePhase = CLOSING
+
+    protected def onClosing: Unit =
+        onClosing()
+
+    protected def onClosing(doSendCloseCommand: Boolean = false): Unit =
         if doSendCloseCommand then
-            try
-                sendCloseCommand(0)
-            catch
-                case e: Exception => logger error e
+            trySendCloseCommand
 
         closeSocket
+        stopThreads
+        clearCollection
+
+    protected def onPostClose: Unit =
+        _lifecyclePhase = CLOSED
+        logger debug "Closed"
+        concurentEventListener.publishPostClose
+
+    protected def trySendCloseCommand: Unit =
+        try
+            sendCloseCommand(0)
+        catch
+            case e: Exception => logger error e
+
+    protected def stopThreads: Unit =
         stopPingingThreadIfNeeded
         stopPacketReceivingThread
 
+    protected def clearCollection: Unit =
         nameSetPendingCommandCodes.clear
 
         if pendingCommandCodes != null then
             pendingCommandCodes.clear
 
-        _lifecyclePhase = CLOSED
-        logger debug "Closed"
-        concurentEventListener.publishPostClose
-
-        true
-
-    private def closeSocket: Unit =
+    protected def closeSocket: Unit =
         logger debug "Closing socket..."
 
         try
@@ -477,11 +508,11 @@ class TcpClient private (
 
         logger debug "Socket is closed"
 
-    private def stopPingingThreadIfNeeded: Unit =
+    protected def stopPingingThreadIfNeeded: Unit =
         if pingingThread != null then
             ThreadUtil.stop(pingingThread, Some(logger))
 
-    private def stopPacketReceivingThread: Unit =
+    protected def stopPacketReceivingThread: Unit =
         ThreadUtil.stop(packageReceivingThread, Some(logger))
 
 object TcpClient:
@@ -503,6 +534,3 @@ object TcpClient:
             protocol           = protocol,
             eventListener      = eventListener,
         )
-
-
-private val logger = LogManager getLogger classOf[TcpClient]
