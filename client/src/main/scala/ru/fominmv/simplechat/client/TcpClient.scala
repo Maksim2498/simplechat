@@ -219,11 +219,11 @@ class TcpClient protected (
 
     protected def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
-            logger debug "Starting pinging thread..."
+            logger debug s"Starting ${pingingThread.getName} thread..."
             pingingThread.start
 
     protected def startPacketReceivingThread: Unit =
-        logger debug "Starting packet receiving thread..."
+        logger debug s"Starting ${packetReceivingThread.getName} thread..."
         packetReceivingThread.start
 
     protected def waitThreadsStarted: Unit =
@@ -234,11 +234,20 @@ class TcpClient protected (
                 catch
                     case _: InterruptedException => onInterruptedException
 
-                packetReceivingThread.getState == Thread.State.NEW ||
-                pingingThread                   != null             &&
-                pingingThread.getState          == Thread.State.NEW
+                threadsStarting
             do ()
         }
+
+    protected def threadsStarting: Boolean =
+        packetReceivingThreadStarting ||
+        piningThreadStarting
+
+    protected def packetReceivingThreadStarting: Boolean =
+        packetReceivingThread.getState == Thread.State.NEW
+
+    protected def piningThreadStarting: Boolean =
+        pingingThread          != null &&
+        pingingThread.getState == Thread.State.NEW
 
     protected def pingingThreadBody: Unit =
         logger debug "Started"
