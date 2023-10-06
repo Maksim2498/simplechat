@@ -8,22 +8,24 @@ import java.net.InetAddress
 import ru.fominmv.simplechat.core.protocol.text.TextProtocol
 import ru.fominmv.simplechat.core.protocol.Protocol
 
+import Config.*
+
 
 case class Config(
-    doRun:              Boolean        = Config.DEFAULT_DO_RUN,
-    doDebug:            Boolean        = Config.DEFAULT_DO_DEBUG,
-    port:               Int            = Config.DEFAULT_PORT,
-    backlog:            Int            = Config.DEFAULT_BACKLOG,
-    maxPendingCommands: Int            = Config.DEFAULT_MAX_PENDING_COMMANDS,
-    logMessages:        Boolean        = Config.DEFAULT_LOG_MESSAGES,
-    broadcastMessages:  Boolean        = Config.DEFAULT_BROADCAST_MESSAGES,
-    bufferingDuration:  FiniteDuration = Config.DEFAULT_BUFFERING_DURATION,
-    name:               String         = Config.DEFAULT_NAME,
-    protocol:           Protocol       = Config.DEFAULT_PROTOCOL,
-    pingInterval:       FiniteDuration = Config.DEFAULT_PING_INTERVAL,
-    doMulticast:        Boolean        = Config.DEFAULT_DO_MULTICAST,
-    multicastAddress:   InetAddress    = Config.DEFAULT_MULTICAST_ADDRESS,
-    multicastPort:      Int            = Config.DEFAULT_MULTICAST_PORT,
+    doRun:              Boolean        = DEFAULT_DO_RUN,
+    doDebug:            Boolean        = DEFAULT_DO_DEBUG,
+    port:               Int            = DEFAULT_PORT,
+    backlog:            Int            = DEFAULT_BACKLOG,
+    maxPendingCommands: Int            = DEFAULT_MAX_PENDING_COMMANDS,
+    logMessages:        Boolean        = DEFAULT_LOG_MESSAGES,
+    broadcastMessages:  Boolean        = DEFAULT_BROADCAST_MESSAGES,
+    bufferingDuration:  FiniteDuration = DEFAULT_BUFFERING_DURATION,
+    name:               String         = DEFAULT_NAME,
+    protocol:           Protocol       = DEFAULT_PROTOCOL,
+    pingInterval:       FiniteDuration = DEFAULT_PING_INTERVAL,
+    doMulticast:        Boolean        = DEFAULT_DO_MULTICAST,
+    multicastAddress:   InetAddress    = DEFAULT_MULTICAST_ADDRESS,
+    multicastPort:      Int            = DEFAULT_MULTICAST_PORT,
 )
 
 object Config:
