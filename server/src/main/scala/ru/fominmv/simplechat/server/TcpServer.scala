@@ -43,7 +43,7 @@ import ru.fominmv.simplechat.core.protocol.{
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.{escape}
-import ru.fominmv.simplechat.core.util.ThreadUtil
+import ru.fominmv.simplechat.core.util.ThreadUtil.{startThread, stopThread}
 import ru.fominmv.simplechat.core.util.UnsignedUtil.USHORT_MAX
 import ru.fominmv.simplechat.core.{Message, NameValidator, DefaultNameValidator}
 
@@ -220,13 +220,11 @@ class TcpServer(
 
 
     private def startConnectionListeningThread: Unit =
-        logger debug "Starting connection listening thread..."
-        connectionListeningThread.start
+        startThread(connectionListeningThread, Some(logger))
 
     private def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
-            logger debug "Starting pinging thread..."
-            pingingThread.start
+            startThread(pingingThread, Some(logger))
 
     private def waitThreadsStarted: Unit =
         synchronized {
@@ -318,11 +316,11 @@ class TcpServer(
         logger debug "Socket is closed"
 
     private def stopConnectionListeningThread: Unit =
-        ThreadUtil.stop(connectionListeningThread, Some(logger))
+        stopThread(connectionListeningThread, Some(logger))
 
     private def stopPingingThread: Unit =
         if pingingThread != null then
-            ThreadUtil.stop(pingingThread, Some(logger))
+            stopThread(pingingThread, Some(logger))
 
     private def onAnyException(exception: Exception): Unit =
         exception match
@@ -402,8 +400,7 @@ class TcpServer(
 
         logger debug "Opening..."
 
-        logger debug "Starting packet receiving thread..."
-        packetReceivingThread.start
+        startThread(packetReceivingThread, Some(logger))
 
         synchronized {
             while
@@ -622,7 +619,7 @@ class TcpServer(
             logger debug "Socket is closed"
 
         private def stopPacketReceivingThread: Unit =
-            ThreadUtil.stop(packetReceivingThread, Some(logger))
+            stopThread(packetReceivingThread, Some(logger))
 
         private def removeFromClients: Unit =
             logger debug "Removing from client map..."

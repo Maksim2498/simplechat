@@ -9,7 +9,7 @@ import org.apache.logging.log4j.LogManager
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
 import ru.fominmv.simplechat.core.util.lifecycle.{LifecycleDriven, LifecyclePhase}
-import ru.fominmv.simplechat.core.util.ThreadUtil
+import ru.fominmv.simplechat.core.util.ThreadUtil.{startThread, stopThread}
 import ru.fominmv.simplechat.server.Client
 
 import error.EventAbortedException
@@ -93,8 +93,7 @@ class BufferingEventListener(
 
 
     private def startPublishingThread: Unit =
-        logger debug "Starting publishing thread..."
-        publishingThread.start
+        startThread(publishingThread, Some(logger))
 
     private def waitPublishingThreadStarted: Unit =
         synchronized {
@@ -146,7 +145,7 @@ class BufferingEventListener(
         logger debug "Published"
 
     private def stopPublishingThread: Unit =
-        ThreadUtil.stop(publishingThread, Some(logger))
+        stopThread(publishingThread, Some(logger))
 
     private def onAnyException(exception: Exception): Unit =
         exception match

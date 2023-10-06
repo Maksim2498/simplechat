@@ -5,9 +5,14 @@ import org.apache.logging.log4j.Logger
 
 
 object ThreadUtil:
-    def stop(thread: Thread, logger: Option[Logger] = None): Boolean =
-        def log(message: String) =
-            logger foreach (_ debug message)
+    def startThread(thread: Thread, logger: Option[Logger] = None): Unit =
+        implicit val implicitLogger = logger
+
+        log(s"Starting ${thread.getName} thread...")
+        thread.start
+
+    def stopThread(thread: Thread, logger: Option[Logger] = None): Boolean =
+        implicit val implicitLogger = logger
 
         log(s"Closing ${thread.getName} thread...")
 
@@ -22,3 +27,7 @@ object ThreadUtil:
         log(s"${thread.getName} thread is closed")
 
         true
+
+
+    private def log(message: String)(implicit logger: Option[Logger]): Unit =
+        logger foreach (_ debug message)

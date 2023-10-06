@@ -40,7 +40,7 @@ import ru.fominmv.simplechat.core.protocol.ServerPacket
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase.*
 import ru.fominmv.simplechat.core.util.lifecycle.LifecyclePhase
 import ru.fominmv.simplechat.core.util.StringExtension.escape
-import ru.fominmv.simplechat.core.util.ThreadUtil
+import ru.fominmv.simplechat.core.util.ThreadUtil.{stopThread, startThread}
 import ru.fominmv.simplechat.core.util.UnsignedUtil.USHORT_MAX
 import ru.fominmv.simplechat.core.Message
 
@@ -219,12 +219,10 @@ class TcpClient protected (
 
     protected def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
-            logger debug s"Starting ${pingingThread.getName} thread..."
-            pingingThread.start
+            startThread(pingingThread, Some(logger))
 
     protected def startPacketReceivingThread: Unit =
-        logger debug s"Starting ${packetReceivingThread.getName} thread..."
-        packetReceivingThread.start
+        startThread(packetReceivingThread, Some(logger))
 
     protected def waitThreadsStarted: Unit =
         synchronized {
@@ -519,10 +517,10 @@ class TcpClient protected (
 
     protected def stopPingingThreadIfNeeded: Unit =
         if pingingThread != null then
-            ThreadUtil.stop(pingingThread, Some(logger))
+            stopThread(pingingThread, Some(logger))
 
     protected def stopPacketReceivingThread: Unit =
-        ThreadUtil.stop(packetReceivingThread, Some(logger))
+        stopThread(packetReceivingThread, Some(logger))
 
 object TcpClient:
     def apply(
