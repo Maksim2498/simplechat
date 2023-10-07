@@ -15,8 +15,8 @@
 This document contains detailed description of the network protocol
 used by this chat application.
 
-It begins with high-level description of the protocol architecture
-(["Protocol" section](#protocol)) and then continues with detailed
+It begins with a high-level description of the protocol architecture
+(["Protocol" section](#protocol)) and then continues with a detailed
 description of the two low-level implementations of it:
 [binary](#binary-implementation) and [textual](#text-implementation).
 
@@ -24,23 +24,23 @@ description of the two low-level implementations of it:
 
 Protocol works in bidirectional request-response manner.
 Client or server can both send *commands* and receive *requests*.
-Every sent command must be reponded with request by default.
+Every sent command must be reponded with a request by default.
 
 ### Commands
 
 Every command consists of *code*, *command identifier*, and *command arguments*.
 Code is used to identify to which command the given request refers to.
 There are two groups of commands: client and server commands.
-Description of this command groups is given in the following tables.
+Description of these command groups is given in the following tables.
 
 **Client commands:**
 
-| Command        | Arguments | Description                                                        |
-|----------------|-----------|--------------------------------------------------------------------|
-| `Ping`         | -         | Checks is server is still alive                                    |
-| `Close`        | -         | Closes connection gracefully                                       |
-| `Set Name`     | `name`    | Sends set-name request. Name is set if server responds `OK`        |
-| `Send Message` | `text`    | Sends send-message request. Message is ent if server responds `OK` |
+| Command        | Arguments | Description                                                            |
+|----------------|-----------|------------------------------------------------------------------------|
+| `Ping`         | -         | Checks is server is still alive                                        |
+| `Close`        | -         | Closes connection gracefully                                           |
+| `Set Name`     | `name`    | Sends set-name request. Name is set if server responds with `OK`       |
+| `Send Message` | `text`    | Sends send-message request. Message is ent if server responds wth `OK` |
 
 **Server commands:**
 
