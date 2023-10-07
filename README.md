@@ -63,12 +63,12 @@ java -jar /path/to/achive.jar
 
 ## Documentation
 
-- [Protocol](./docs/protocol.md) (***WIP***).
-- [Client](./client/README.md)
+- [Protocol](./docs/protocol.md);
+- [Client](./client/README.md);
 - [Client CLI](./client/docs/cli.md);
-- [Client shell](./client/docs/shell.md)
-- [Core](./core/README.md)
-- [Server](./server/README.md)
+- [Client shell](./client/docs/shell.md);
+- [Core](./core/README.md);
+- [Server](./server/README.md);
 - [Server CLI](./server/docs/cli.md);
 - [Server shell](./server/docs/shell.md);
 - [Code of Conduct](./docs/CODE_OF_CONDUCT.md);
