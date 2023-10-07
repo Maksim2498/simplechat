@@ -193,7 +193,7 @@ class TcpClient protected (
     protected def onOpening: Unit =
         connect
         startThreads
-        waitThreadsStarted
+        waitAllThreadsStarted
 
     protected def startThreads: Unit =
         startPingingThreadIfNeeded
@@ -224,7 +224,7 @@ class TcpClient protected (
     protected def startPacketReceivingThread: Unit =
         startThread(packetReceivingThread, Some(logger))
 
-    protected def waitThreadsStarted: Unit =
+    protected def waitAllThreadsStarted: Unit =
         synchronized {
             while
                 try
@@ -480,9 +480,9 @@ class TcpClient protected (
         if doSendCloseCommand then
             trySendCloseCommand
 
-        closeSocket
-        stopThreads
-        clearCollection
+        closeAllSockets
+        stopAllThreads
+        clearAllCollections
 
     protected def onPostClose: Unit =
         _lifecyclePhase = CLOSED
@@ -495,15 +495,18 @@ class TcpClient protected (
         catch
             case e: Exception => logger error e
 
-    protected def stopThreads: Unit =
+    protected def stopAllThreads: Unit =
         stopPingingThreadIfNeeded
         stopPacketReceivingThread
 
-    protected def clearCollection: Unit =
+    protected def clearAllCollections: Unit =
         nameSetPendingCommandCodes.clear
 
         if pendingCommandCodes != null then
             pendingCommandCodes.clear
+
+    protected def closeAllSockets: Unit =
+        closeSocket
 
     protected def closeSocket: Unit =
         logger debug "Closing socket..."
