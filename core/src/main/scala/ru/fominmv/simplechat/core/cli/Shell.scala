@@ -8,6 +8,8 @@ import java.io.EOFException
 import ru.fominmv.simplechat.core.error.ClosedException
 import ru.fominmv.simplechat.core.util.lifecycle.Closeable
 
+import BrightAnsiColor.*
+
 
 trait Shell extends Closeable:
     @throws[ClosedException]("When closed")
@@ -101,7 +103,7 @@ trait Shell extends Closeable:
         command action args.drop(1).toList
 
     protected def onInputException(exception: Exception): Unit =
-        console print s"$RED${exception.getMessage}$RESET"
+        console print s"$BOLD$BRIGHT_RED${exception.getMessage}$RESET"
     
     protected def printHelp: Unit =
         printHelp()
