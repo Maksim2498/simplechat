@@ -5,8 +5,10 @@
 - [Table of Contents](#table-of-contents);
 - [About](#about);
 - [Protocol](#protocol);
-  - [Text Version](#text-version);
-  - [Binary Version](#binary-version).
+  - [Commands](#commands);
+  - [Responsed](#responses);
+  - [Text Implementation](#text-implementation);
+  - [Binary Implementation](#binary-implementation).
 
 ## About
 
@@ -16,15 +18,54 @@ used by this chat application.
 It begins with high-level description of the protocol architecture
 (["Protocol" section](#protocol)) and then continues with detailed
 description of the two low-level implementations of it:
-[binary](#binary-version) and [textual](#text-version).
+[binary](#binary-implementation) and [textual](#text-implementation).
 
 ## Protocol
 
-***WIP***
+Protocol works in bidirectional request-response manner.
+Client or server can both send *commands* and receive *requests*.
+Every sent command must be reponded with request by default.
 
-### Text Version
+### Commands
 
-***WIP***
+Every command consists of *code*, *command identifier*, and *command arguments*.
+Code is used to identify to which command the given request refers to.
+There are two groups of commands: client and server commands.
+Description of this command groups is given in the following tables.
+
+**Client commands:**
+
+| Command        | Arguments | Description                                                        |
+|----------------|-----------|--------------------------------------------------------------------|
+| `Ping`         | -         | Checks is server is still alive                                    |
+| `Close`        | -         | Closes connection gracefully                                       |
+| `Set Name`     | `name`    | Sends set-name request. Name is set if server responds `OK`        |
+| `Send Message` | `text`    | Sends send-message request. Message is ent if server responds `OK` |
+
+**Server commands:**
+
+| Command        | Arguments        | Description                     |
+|----------------|------------------|---------------------------------|
+| `Ping`         | -                | Checks if client is still alive |
+| `Close`        | -                | Closes connection gracefully    |
+| `Send Message` | `author`, `text` | Sends message                   |
+
+### Responses
+
+Every response consists of *code*, and *status*.
+Code must be the same as the one from a command to which this request is refered to.
+Status indicates whether command is executed successfully or not.
+
+**Statuses:**
+
+- `OK` - command is executed successfully;
+- `ERROR` - command cannot be executed due to some circumstances;
+- `FATAL` - executor cannot proceed its work, connection must be closed.
+
+### Text Implementation
+
+In text implementation both commands and responses are represented by
+one line of space-separated words. The structure of both command and request is following:
 
 **Request:**
 
@@ -38,6 +79,51 @@ description of the two low-level implementations of it:
 'r' code status
 ```
 
-### Binary Version
+Values enclosed within quotes mean "exact as inside quotes".
+
+"code" is just a number of command code which may be negative.
+Code must be in range [-32,768 to 32,767] (16-bit sigend).
+"command" is a command name. The command names are following:
+
+| Command        | Name       |
+|----------------|------------|
+| `Ping`         | `ping`     |
+| `Close`        | `close`    |
+| `Set Name`     | `set_name` |
+| `Send Message` | `send-msg` |
+
+"{arg}" means "zero or more space-separated arguments".
+All arguments are of string type and must be enclosed with double quotees ('"').
+Argument strings may contain escape sequences starting with `\`.
+Supported escape sequences are following:
+
+| Escape Sequence | Description     |
+|-----------------|-----------------|
+| `\b`            | Backspace       |
+| `\f`            | From feed       |
+| `\r`            | Carriage return |
+| `\n`            | New line        |
+| `\t`            | Tab             |
+| `"`             | Double quote    |
+| `\\`            | Backslash       |
+
+"status" means "status name".
+Status names are exact the same as listed in [Responses section](#responses) and are case-insensitive.
+
+**Example:**
+
+If client would like to change its name he must sent a message like following:
+
+```text
+c 2498 set_name "Maksim"
+```
+
+The server (if accepted) will repond in the following way:
+
+```text
+r 2498 OK
+```
+
+### Binary Implementation
 
 ***WIP***
