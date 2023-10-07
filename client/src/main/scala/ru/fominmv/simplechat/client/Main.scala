@@ -3,7 +3,7 @@ package ru.fominmv.simplechat.client
 
 import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
-import java.net.InetAddress
+import java.net.{InetAddress, NetworkInterface}
 
 import scopt.OParser
 
@@ -111,6 +111,44 @@ object Main:
             opt[Protocol]('P', "protocol")
                 .text("Specifies client protocol type")
                 .action((v, c) => c.copy(protocol = v)),
+
+            opt[String]("network-interface")
+                .text("Specifies network interface name used for multicasting (if not set then the default one will be used if possible)")
+                .action((v, c) => c.copy(networkInterface = Some(NetworkInterface getByName v)))
+                .validate(v =>
+                    val networkInterface = NetworkInterface getByName v
+
+                    if networkInterface == null then
+                        failure(s"Network interface \"$v\" not found")
+                    else if !networkInterface.supportsMulticast then
+                        failure(s"Network interface \"$v\" doesn't support multicasting")
+                    else
+                        success
+                ),
+
+            opt[Unit]('m', "multicast")
+                .text("Enables message multicasting (if enabled then client will additionally receive packets from server using UDP multicasting in addition to TCP unicast)")
+                .action((v, c) => c.copy(doMulticast = true)),
+
+            opt[InetAddress]("multicast-address")
+                .text("Specifies multicast address")
+                .action((v, c) => c.copy(multicastAddress = v))
+                .validate(v =>
+                    if v.isMulticastAddress then
+                        success
+                    else
+                        failure("Option --multicast-address must be a multicast address")
+                ),
+
+            opt[Int]("multicast-port")
+                .text("Specifies multicast port")
+                .action((v, c) => c.copy(multicastPort = v ))
+                .validate(
+                    if (0 to USHORT_MAX) contains _ then
+                        success
+                    else
+                        failure("Option --multicast-port must be in range [0, 65535]")
+                ),
         )
 
     private def run(config: Config): Unit =
@@ -122,6 +160,10 @@ object Main:
             pingInterval       = config.pingInterval,
             protocol           = config.protocol,
             logMessages        = config.logMessages,
+            networkInterface   = config.networkInterface,
+            doMulticast        = config.doMulticast,
+            multicastAddress   = config.multicastAddress,
+            multicastPort      = config.multicastPort,
         )
 
         val client = builder.buildClient

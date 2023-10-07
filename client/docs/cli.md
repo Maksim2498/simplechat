@@ -42,15 +42,19 @@ It will look like this: `--port 1502` or `--port=1502`.
 
 ## Options
 
-| Name                     | Arguments Type      | Default Value | Description                                                                                                                            |
-|--------------------------|---------------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| `--help`, `-h`           | -                   | -             | Prints help message and quits                                                                                                          |
-| `--version`, `-v`        | -                   | -             | Prints version and quits                                                                                                               |
-| `--debug`, `-d`          | -                   | -             | Enables debug mode                                                                                                                     |
-| `--print-messages`       | `boolean`           | `true`        | Enables or disables printing of received messages                                                                                      |
-| `--address`, `-a`        | `address`           | `localhost`   | Specifies server address                                                                                                               |
-| `--port`, `-p`           | `port`              | `24982`       | Specifies server port                                                                                                                  |
-| `--max-pending-commands` | `uint`              | `50`          | Specifies how many commands may be sent to server without response before connection closure (if 0 then all responses will be ignored) |
-| `--name`, `-n`           | `string`            | -             | Specifies client name                                                                                                                  |
-| `--ping-interval`        | `duration`          | `10s`         | Specifies delay between server pinging (if 0 then pinging is disabled)                                                                 |
-| `--protocol`, `-P`       | `"text" | "binary"` | `"text"`      | Specifies client protocol type                                                                                                         |
+| Name                     | Arguments Type      | Default Value | Description                                                                                                                                           |
+|--------------------------|---------------------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--help`, `-h`           | -                   | -             | Prints help message and quits                                                                                                                         |
+| `--version`, `-v`        | -                   | -             | Prints version and quits                                                                                                                              |
+| `--debug`, `-d`          | -                   | -             | Enables debug mode                                                                                                                                    |
+| `--print-messages`       | `boolean`           | `true`        | Enables or disables printing of received messages                                                                                                     |
+| `--address`, `-a`        | `address`           | `localhost`   | Specifies server address                                                                                                                              |
+| `--port`, `-p`           | `port`              | `24982`       | Specifies server port                                                                                                                                 |
+| `--max-pending-commands` | `uint`              | `50`          | Specifies how many commands may be sent to server without response before connection closure (if 0 then all responses will be ignored)                |
+| `--name`, `-n`           | `string`            | -             | Specifies client name                                                                                                                                 |
+| `--ping-interval`        | `duration`          | `10s`         | Specifies delay between server pinging (if 0 then pinging is disabled)                                                                                |
+| `--protocol`, `-P`       | `"text" | "binary"` | `"text"`      | Specifies client protocol type                                                                                                                        |
+| `--network-interface`    | `string`            | -             | Specifies network interface name used for multicasting (if not set then the default one will be used if possible)                                     |
+| `--multicast`, `-m`      | -                   |               | Enables message multicasting (if enabled then client will additionally receive packets from server using UDP multicasting in addition to TCP unicast) |
+| `--multicast-address`    | `address`           | `233.0.0.1`   | Specifies multicast address                                                                                                                           |
+| `--multicast-port`       | `port`              | `24982`       | Specifies multicast port                                                                                                                              |

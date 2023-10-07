@@ -191,31 +191,21 @@ class TcpClient protected (
         _lifecyclePhase = OPENING
 
     protected def onOpening: Unit =
-        connect
+        prepareAllSockets
         startThreads
         waitAllThreadsStarted
+
+    protected def prepareAllSockets: Unit =
+        connectSocket
+
+    protected def connectSocket: Unit =
+        logger debug "Connecting..."
+        socket connect InetSocketAddress(address, port)
+        logger debug "Connected"
 
     protected def startThreads: Unit =
         startPingingThreadIfNeeded
         startPacketReceivingThread
-
-    protected def onPostOpen: Unit =
-        _lifecyclePhase = OPEN
-        concurentEventListener.publishPostOpen
-        logger debug "Opened"
-
-        if eventListener.eventListeners.isEmpty then
-            logger debug "No event listeners were registered"
-        else
-            logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
-
-        if _name != None then
-            name = _name.get
-
-    protected def connect: Unit =
-        logger debug "Connecting..."
-        socket connect InetSocketAddress(address, port)
-        logger debug "Connected"
 
     protected def startPingingThreadIfNeeded: Unit =
         if pingingThread != null then
@@ -246,6 +236,19 @@ class TcpClient protected (
     protected def piningThreadStarting: Boolean =
         pingingThread          != null &&
         pingingThread.getState == Thread.State.NEW
+
+    protected def onPostOpen: Unit =
+        _lifecyclePhase = OPEN
+        concurentEventListener.publishPostOpen
+        logger debug "Opened"
+
+        if eventListener.eventListeners.isEmpty then
+            logger debug "No event listeners were registered"
+        else
+            logger debug s"Registered event listeners: ${eventListener.eventListeners map(_.name) mkString ", "}"
+
+        if _name != None then
+            name = _name.get
 
     protected def pingingThreadBody: Unit =
         logger debug "Started"
@@ -279,7 +282,7 @@ class TcpClient protected (
 
                 val packet = protocol readServerPacket inputStream
 
-                logger debug "Packet received"
+                logger debug "Received packet"
 
                 onPacket(packet)
             catch
@@ -295,10 +298,10 @@ class TcpClient protected (
     protected def outputStream: OutputStream =
         socket.getOutputStream
 
-    protected def onPacket(packet: ServerPacket): Unit =
+    protected def onPacket(packet: ServerPacket, doRespond: Boolean = true): Unit =
         packet match
             case Response(code, status) => onResponse(code, status)
-            case command: ServerCommand => onCommand(command)
+            case command: ServerCommand => onCommand(command, doRespond)
 
     protected def onResponse(code: Short, status: Status): Unit =
         logger debug s"Got response: $code - $status"
@@ -356,28 +359,37 @@ class TcpClient protected (
 
         throw ProtocolException()
 
-    protected def onCommand(command: ServerCommand): Unit =
+    protected def onCommand(command: ServerCommand, doRespond: Boolean = true): Unit =
         command match
-            case PingServerCommand(code)                 => onPingCommand(code)
-            case CloseServerCommand(code)                => onCloseCommand(code)
-            case SendMessageServerCommand(code, message) => onSendMessageCommand(code, message)
+            case PingServerCommand(code)                 => onPingCommand(code, doRespond)
+            case CloseServerCommand(code)                => onCloseCommand(code, doRespond)
+            case SendMessageServerCommand(code, message) => onSendMessageCommand(code, message, doRespond)
 
-    protected def onPingCommand(code: Short): Unit =
+    protected def onPingCommand(code: Short, doRespond: Boolean = true): Unit =
         logger debug s"Received ping command: $code"
-        sendResponse(code, OK)
-        logger debug "Pong"
+
+        if doRespond then
+            sendResponse(code, OK)
+            logger debug "Pong"
+
         concurentEventListener.publishPinged
 
-    protected def onCloseCommand(code: Short): Unit =
+    protected def onCloseCommand(code: Short, doRespond: Boolean = true): Unit =
         logger debug s"Received disconnect command: $code"
-        sendResponse(code, OK)
+
+        if doRespond then
+            sendResponse(code, OK)
+
         closeGenerally
         logger debug "Disconnected"
         concurentEventListener.publishDisconnectedByServer
 
-    protected def onSendMessageCommand(code: Short, message: Message): Unit =
+    protected def onSendMessageCommand(code: Short, message: Message, doRespond: Boolean = true): Unit =
         logger debug s"Received send message command: $code - $message"
-        sendResponse(code, OK)
+
+        if doRespond then
+            sendResponse(code, OK)
+
         concurentEventListener publishMessageReceived message
 
     protected def sendResponse(code: Short, status: Status): Unit =
